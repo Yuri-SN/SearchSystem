@@ -23,9 +23,10 @@ set(SOURCES
     Database/PostgresWordRepository.h
     Database/PostgresWordRepository.cpp
 
-    # TODO: Http
-    # Http/BoostBeastHttpClient.h
-    # Http/BoostBeastHttpClient.cpp
+    # Http
+    Http/BoostBeastHttpClient.h
+    Http/BoostBeastHttpClient.cpp
+    # TODO: Http Server
     # Http/BoostBeastHttpServer.h
     # Http/BoostBeastHttpServer.cpp
 )
