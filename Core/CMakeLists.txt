@@ -34,6 +34,10 @@ set(SOURCES
     Application/UseCases/IndexPageUseCase.cpp
     Application/UseCases/SearchDocumentsUseCase.h
     Application/UseCases/SearchDocumentsUseCase.cpp
+
+    DTO/CrawlResultDTO.h
+    DTO/SearchRequestDTO.h
+    DTO/SearchResponseDTO.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
