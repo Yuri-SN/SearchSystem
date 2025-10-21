@@ -26,9 +26,8 @@ set(SOURCES
     # Http
     Http/BoostBeastHttpClient.h
     Http/BoostBeastHttpClient.cpp
-    # TODO: Http Server
-    # Http/BoostBeastHttpServer.h
-    # Http/BoostBeastHttpServer.cpp
+    Http/BoostBeastHttpServer.h
+    Http/BoostBeastHttpServer.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
