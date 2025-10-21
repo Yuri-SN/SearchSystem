@@ -21,6 +21,14 @@ set(SOURCES
     Domain/Service/IndexingService.cpp
     Domain/Service/RankingService.h
     Domain/Service/RankingService.cpp
+
+    Ports/IConfiguration.h
+    Ports/IDocumentRepository.h
+    Ports/IHtmlParser.h
+    Ports/IHttpClient.h
+    Ports/IHttpServer.h
+    Ports/ITextProcessor.h
+    Ports/IWordRepository.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
