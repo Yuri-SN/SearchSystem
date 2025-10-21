@@ -7,9 +7,9 @@ set(SOURCES
     Configuration/IniConfiguration.h
     Configuration/IniConfiguration.cpp
 
-    # TODO: Text
-    # Text/BoostLocaleTextProcessor.h
-    # Text/BoostLocaleTextProcessor.cpp
+    # Text
+    Text/BoostLocaleTextProcessor.h
+    Text/BoostLocaleTextProcessor.cpp
 
     # Parsers
     Parsers/HtmlParser.h
