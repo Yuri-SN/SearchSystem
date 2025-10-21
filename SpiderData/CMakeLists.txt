@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(SpiderData VERSION 0.1 LANGUAGES CXX)
+
+# set(SOURCES)
+
+# add_library(${PROJECT_NAME} STATIC ${SOURCES})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE Core)
