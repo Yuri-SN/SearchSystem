@@ -29,6 +29,11 @@ set(SOURCES
     Ports/IHttpServer.h
     Ports/ITextProcessor.h
     Ports/IWordRepository.h
+
+    Application/UseCases/IndexPageUseCase.h
+    Application/UseCases/IndexPageUseCase.cpp
+    Application/UseCases/SearchDocumentsUseCase.h
+    Application/UseCases/SearchDocumentsUseCase.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
