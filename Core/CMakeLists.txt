@@ -16,6 +16,11 @@ set(SOURCES
     Domain/Model/Word.cpp
     Domain/Model/WordFrequency.h
     Domain/Model/WordFrequency.cpp
+
+    Domain/Service/IndexingService.h
+    Domain/Service/IndexingService.cpp
+    Domain/Service/RankingService.h
+    Domain/Service/RankingService.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
