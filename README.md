@@ -314,13 +314,65 @@ password=your_password
 - Boost 1.88+ (system, locale, beast)
 - PostgreSQL 12+
 - libpqxx 7.10+
+- gumbo-parser (для парсинга HTML)
+
+## Установка зависимостей
+
+### Ubuntu/Debian
+
+```bash
+sudo apt update
+sudo apt install -y \
+    build-essential \
+    cmake \
+    libboost-locale-dev \
+    libboost-system-dev \
+    libboost-thread-dev \
+    libpqxx-dev \
+    libpq-dev \
+    postgresql \
+    libgumbo-dev
+```
+
+### Windows
+
+**Используя vcpkg:**
+
+```powershell
+# Установка vcpkg (если ещё не установлен)
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+
+# Установка зависимостей
+.\vcpkg install boost-locale boost-system boost-thread libpqxx gumbo
+
+# Интеграция с Visual Studio
+.\vcpkg integrate install
+```
+
+**Используя CMake с vcpkg:**
+
+```bash
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[путь к vcpkg]/scripts/buildsystems/vcpkg.cmake
+cmake --build build
+```
+
+### macOS
+
+```bash
+# Установка Homebrew (если ещё не установлен)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Установка зависимостей
+brew install boost libpqxx postgresql gumbo-parser
+```
 
 ## Сборка проекта
 
-```bash
-# Установка зависимостей (Ubuntu/Debian)
-sudo apt install libboost-locale-dev libboost-system-dev libboost-thread-dev libpqxx-dev libpq-dev postgresql
+### Linux/macOS
 
+```bash
 # Создание директории для сборки
 mkdir -p build && cd build
 
@@ -337,6 +389,20 @@ make SpiderData        # libSpiderData.a
 make HTTPServerData    # libHTTPServerData.a
 make Spider            # Spider (executable)
 make HTTPServer        # HTTPServer (executable)
+```
+
+### Windows
+
+```powershell
+# Создание директории для сборки
+mkdir build
+cd build
+
+# Конфигурация CMake (с vcpkg)
+cmake .. -DCMAKE_TOOLCHAIN_FILE=[путь к vcpkg]/scripts/buildsystems/vcpkg.cmake
+
+# Сборка
+cmake --build . --config Release
 ```
 
 ## Запуск
