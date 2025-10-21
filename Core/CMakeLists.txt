@@ -3,7 +3,10 @@ cmake_minimum_required(VERSION 3.16)
 project(Core VERSION 0.1 LANGUAGES CXX)
 
 set(SOURCES
-    Domain/Model/Document.cpp
+    Domain/ValueObject/Url.h
+    Domain/ValueObject/Url.cpp
+    Domain/ValueObject/SearchQuery.h
+    Domain/ValueObject/SearchQuery.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
