@@ -8,6 +8,4 @@ set(SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Core)
-target_link_libraries(${PROJECT_NAME} PRIVATE Infrastructure)
 target_link_libraries(${PROJECT_NAME} PRIVATE SpiderData)
