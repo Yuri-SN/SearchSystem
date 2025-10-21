@@ -13,72 +13,65 @@
 
 Проект построен по принципам **Clean Architecture** с разделением на слои:
 
-```bash
-┌─────────────────────────────────────────────────────────────┐
-│                  Приложения (Entry Points)                  │
-│                                                             │
-│    ┌──────────────────┐             ┌──────────────────┐    │
-│    │     Spider       │             │   HTTPServer     │    │
-│    │   (main.cpp)     │             │   (main.cpp)     │    │
-│    └────────┬─────────┘             └────────┬─────────┘    │
-│             │                                │              │
-└─────────────┼────────────────────────────────┼──────────────┘
-              │                                │
-              ↓                                ↓
-┌─────────────────────────────────────────────────────────────┐
-│                DI Containers (Composition Root)             │
-│                                                             │
-│    ┌──────────────────┐             ┌──────────────────┐    │
-│    │   SpiderData     │             │ HTTPServerData   │    │
-│    │  (DI Container)  │             │  (DI Container)  │    │
-│    └────────┬─────────┘             └────────┬─────────┘    │
-└─────────────┼────────────────────────────────┼──────────────┘
-              │                                │
-              └────────────────┬───────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     Infrastructure Layer                    │
-│                                                             │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │                    Adapters                         │   │
-│   │  • PostgresDocumentRepository                       │   │
-│   │  • PostgresWordRepository                           │   │
-│   │  • BoostBeastHttpClient                             │   │
-│   │  • BoostBeastHttpServer                             │   │
-│   │  • HtmlParser                                       │   │
-│   │  • TextProcessor (Boost Locale)                     │   │
-│   │  • IniConfiguration                                 │   │
-│   └─────────────────────────────────────────────────────┘   │
-└──────────────────────────────┬──────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│                      Application Layer                      │
-│                                                             │
-│   ┌──────────────────┐               ┌──────────────────┐   │
-│   │   Use Cases      │               │     Ports        │   │
-│   │                  │               │  (Interfaces)    │   │
-│   │ • IndexPage      │               │ • IDocRepository │   │
-│   │ • SearchDocuments│               │ • IWordRepository│   │
-│   │                  │               │ • IHttpClient    │   │
-│   │                  │               │ • IConfiguration │   │
-│   │                  │               │ • etc...         │   │
-│   └──────────────────┘               └──────────────────┘   │
-└──────────────────────────────┬──────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│                         Domain Layer                        │
-│        (Бизнес-логика, не зависит от внешних систем)        │
-│                                                             │
-│   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐    │
-│   │   Entities   │   │Value Objects │   │   Services   │    │
-│   │              │   │              │   │              │    │
-│   │ • Document   │   │ • Url        │   │ • Indexing   │    │
-│   │ • Word       │   │ • SearchQuery│   │ • Ranking    │    │
-│   │ • WordFreq   │   │              │   │              │    │
-│   │ • SearchRes  │   │              │   │              │    │
-│   └──────────────┘   └──────────────┘   └──────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
+### Слои архитектуры (от внешних к внутренним)
+
+**Layer 1: Приложения (Entry Points)**
+- `Spider` (main.cpp) - программа-краулер
+- `HTTPServer` (main.cpp) - HTTP-сервер для поиска
+
+↓ *зависят от*
+
+**Layer 2: DI Containers (Composition Root)**
+- `SpiderData` - контейнер зависимостей для Spider
+- `HTTPServerData` - контейнер зависимостей для HTTPServer
+
+↓ *собирают и связывают*
+
+**Layer 3: Infrastructure Layer (Адаптеры)**
+
+*Реализации интерфейсов для внешних систем:*
+- `PostgresDocumentRepository` - работа с документами в БД
+- `PostgresWordRepository` - работа со словами в БД
+- `BoostBeastHttpClient` - HTTP-клиент для скачивания страниц
+- `BoostBeastHttpServer` - HTTP-сервер для обработки запросов
+- `HtmlParser` - парсинг HTML-страниц
+- `TextProcessor` - обработка текста (Boost Locale)
+- `IniConfiguration` - чтение конфигурации из INI-файлов
+
+↓ *реализуют порты из*
+
+**Layer 4: Application Layer (Бизнес-сценарии)**
+
+*Use Cases (варианты использования):*
+- `IndexPageUseCase` - индексация веб-страницы
+- `SearchDocumentsUseCase` - поиск по документам
+
+*Ports (интерфейсы):*
+- `IDocumentRepository` - интерфейс репозитория документов
+- `IWordRepository` - интерфейс репозитория слов
+- `IHttpClient` - интерфейс HTTP-клиента
+- `IHttpServer` - интерфейс HTTP-сервера
+- `IHtmlParser` - интерфейс парсера HTML
+- `ITextProcessor` - интерфейс обработки текста
+- `IConfiguration` - интерфейс конфигурации
+
+↓ *оркеструют работу*
+
+**Layer 5: Domain Layer (Бизнес-логика)**
+
+*Entities (сущности):*
+- `Document` - веб-страница
+- `Word` - уникальное слово
+- `WordFrequency` - связь документ-слово с частотой
+- `SearchResult` - результат поиска
+
+*Value Objects (объекты-значения):*
+- `Url` - валидированный URL
+- `SearchQuery` - поисковый запрос
+
+*Domain Services (доменные сервисы):*
+- `IndexingService` - анализ частотности слов
+- `RankingService` - ранжирование результатов
 
 ## Структура проекта
 
@@ -191,7 +184,7 @@ HTTPServer (executable)
 ```bash
 Infrastructure → Application → Domain
      ↓               ↓           ↓
-  (адаптеры)    (use cases)  (сущности)
+  (адаптеры)     (use cases)  (сущности)
 ```
 
 Зависимости направлены **внутрь**: внешние слои знают о внутренних, но не наоборот.
