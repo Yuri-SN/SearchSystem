@@ -15,11 +15,12 @@ set(SOURCES
     Parsers/HtmlParser.h
     Parsers/HtmlParser.cpp
 
-    # TODO: Database
-    # Database/DatabaseConnection.h
-    # Database/DatabaseConnection.cpp
-    # Database/PostgresDocumentRepository.h
-    # Database/PostgresDocumentRepository.cpp
+    # Database
+    Database/DatabaseConnection.h
+    Database/DatabaseConnection.cpp
+    Database/PostgresDocumentRepository.h
+    Database/PostgresDocumentRepository.cpp
+    # TODO: Database repositories
     # Database/PostgresWordRepository.h
     # Database/PostgresWordRepository.cpp
 
