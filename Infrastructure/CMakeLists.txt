@@ -20,9 +20,8 @@ set(SOURCES
     Database/DatabaseConnection.cpp
     Database/PostgresDocumentRepository.h
     Database/PostgresDocumentRepository.cpp
-    # TODO: Database repositories
-    # Database/PostgresWordRepository.h
-    # Database/PostgresWordRepository.cpp
+    Database/PostgresWordRepository.h
+    Database/PostgresWordRepository.cpp
 
     # TODO: Http
     # Http/BoostBeastHttpClient.h
