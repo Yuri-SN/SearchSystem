@@ -51,7 +51,7 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
     std::chrono::seconds timeout_;
     int workerId_ = 0;  // ID рабочего потока для логирования
 
-    static constexpr int MAX_REDIRECTS = 10;
+    static constexpr int MAX_REDIRECTS = 5;
     static constexpr int HTTP_VERSION = 11;
     static constexpr int DEFAULT_HTTP_PORT = 80;
     static constexpr int DEFAULT_HTTPS_PORT = 443;
