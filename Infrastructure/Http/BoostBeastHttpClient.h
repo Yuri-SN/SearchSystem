@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <string>
+#include <vector>
 
 #include "../../Core/Ports/IHttpClient.h"
 
@@ -103,9 +105,10 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      * @brief Обрабатывает редиректы
      * @param location URL для редиректа
      * @param redirectCount Текущее количество редиректов
+     * @param visitedUrls Список посещённых URL для детектирования циклов
      * @return Содержимое страницы после редиректа
      */
-    std::optional<std::string> handleRedirect(const std::string& location, int redirectCount);
+    std::optional<std::string> handleRedirect(const std::string& location, int redirectCount, std::vector<std::string> visitedUrls = {});
 
     /**
      * @brief Формирует префикс лог-сообщения с ID потока

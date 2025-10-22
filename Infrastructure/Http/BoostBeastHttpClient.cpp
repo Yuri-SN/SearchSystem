@@ -205,15 +205,26 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const P
     }
 }
 
-std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::string& url, int redirectCount) {
+std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::string& url, int redirectCount, std::vector<std::string> visitedUrls) {
     if (redirectCount >= MAX_REDIRECTS) {
-        std::cerr << "Превышено максимальное количество редиректов для " << url << "\n";
+        std::cerr << getLogPrefix() << "Превышено максимальное количество редиректов для " << url << "\n";
         return std::nullopt;
     }
 
+    // Проверка на циклические редиректы
+    for (const auto& visitedUrl : visitedUrls) {
+        if (visitedUrl == url) {
+            std::cerr << getLogPrefix() << "Обнаружен циклический редирект: " << url << "\n";
+            return std::nullopt;
+        }
+    }
+
+    // Добавляем текущий URL в список посещённых
+    visitedUrls.push_back(url);
+
     const ParsedUrl parsedUrl = parseUrl(url);
     if (!parsedUrl.valid) {
-        std::cerr << "Некорректный URL: " << url << "\n";
+        std::cerr << getLogPrefix() << "Некорректный URL: " << url << "\n";
         return std::nullopt;
     }
 
@@ -243,7 +254,10 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
             std::string redirectUrl = response.locationHeader;
 
             // Если Location содержит относительный путь, строим абсолютный URL
-            if (redirectUrl[0] == '/') {
+            if (redirectUrl.size() >= 2 && redirectUrl[0] == '/' && redirectUrl[1] == '/') {
+                // Protocol-relative URL (//example.com)
+                redirectUrl = parsedUrl.scheme + ":" + redirectUrl;
+            } else if (redirectUrl[0] == '/') {
                 // Относительный путь от корня
                 redirectUrl = parsedUrl.scheme + "://" + parsedUrl.host + redirectUrl;
             } else if (redirectUrl.substr(0, 4) != "http") {
@@ -256,7 +270,7 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
             std::cerr << getLogPrefix() << "Редирект: " << url << " -> " << redirectUrl << "\n";
 
             // Рекурсивно следуем по редиректу
-            return handleRedirect(redirectUrl, redirectCount + 1);
+            return handleRedirect(redirectUrl, redirectCount + 1, visitedUrls);
         }
 
         // Ошибка клиента (4xx) или сервера (5xx)
