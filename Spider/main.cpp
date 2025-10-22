@@ -95,11 +95,12 @@ class CrawlQueue {
  */
 class CrawlerWorker {
   public:
-    CrawlerWorker(std::shared_ptr<CrawlQueue> queue,
+    CrawlerWorker(int workerId, std::shared_ptr<CrawlQueue> queue,
                   std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> indexPageUseCase,
                   std::shared_ptr<Core::Ports::IHttpClient> httpClient,
                   std::shared_ptr<Core::Ports::IHtmlParser> htmlParser, int maxDepth)
-        : queue_(std::move(queue)),
+        : workerId_(workerId),
+          queue_(std::move(queue)),
           indexPageUseCase_(std::move(indexPageUseCase)),
           httpClient_(std::move(httpClient)),
           htmlParser_(std::move(htmlParser)),
@@ -118,7 +119,7 @@ class CrawlerWorker {
             try {
                 processUrl(url, depth);
             } catch (const std::exception& e) {
-                std::cerr << "Ошибка при обработке " << url << ": " << e.what() << "\n";
+                std::cerr << "[Поток " << workerId_ << "] Ошибка при обработке " << url << ": " << e.what() << "\n";
             }
 
             queue_->markCompleted();
@@ -127,13 +128,13 @@ class CrawlerWorker {
 
   private:
     void processUrl(const std::string& url, int depth) {
-        std::cout << "Обработка [глубина " << depth << "]: " << url << "\n";
+        std::cout << "[Поток " << workerId_ << "] Обработка [глубина " << depth << "]: " << url << "\n";
 
         // Скачиваем страницу
         auto htmlContent = httpClient_->get(url);
 
         if (!htmlContent.has_value()) {
-            std::cerr << "Не удалось скачать: " << url << "\n";
+            std::cerr << "[Поток " << workerId_ << "] Не удалось скачать: " << url << "\n";
             return;
         }
 
@@ -141,17 +142,18 @@ class CrawlerWorker {
         const auto documentId = indexPageUseCase_->execute(url, htmlContent.value());
 
         if (documentId == 0) {
-            std::cerr << "Не удалось проиндексировать: " << url << "\n";
+            std::cerr << "[Поток " << workerId_ << "] Не удалось проиндексировать: " << url << "\n";
             return;
         }
 
-        std::cout << "Проиндексирован документ ID=" << documentId << ": " << url << "\n";
+        std::cout << "[Поток " << workerId_ << "] Проиндексирован документ ID=" << documentId << ": " << url << "\n";
 
         // Если не достигли максимальной глубины - извлекаем ссылки
         if (depth < maxDepth_) {
             auto links = htmlParser_->extractLinks(htmlContent.value(), url);
 
-            std::cout << "Найдено ссылок: " << links.size() << " на странице " << url << "\n";
+            std::cout << "[Поток " << workerId_ << "] Найдено ссылок: " << links.size() << " на странице " << url
+                      << "\n";
 
             for (const auto& link : links) {
                 queue_->push(link, depth + 1);
@@ -159,6 +161,7 @@ class CrawlerWorker {
         }
     }
 
+    int workerId_;
     std::shared_ptr<CrawlQueue> queue_;
     std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> indexPageUseCase_;
     std::shared_ptr<Core::Ports::IHttpClient> httpClient_;
@@ -210,14 +213,14 @@ int main(int argc, char* argv[]) {
 
         // Запускаем рабочие потоки
         for (int i = 0; i < threadPoolSize; ++i) {
-            threads.emplace_back([&container, queue, maxDepth]() {
+            threads.emplace_back([&container, queue, maxDepth, workerId = i + 1]() {
                 // Каждый поток создаёт свой собственный IndexPageUseCase
                 // с отдельным подключением к БД
                 auto indexPageUseCase = container.createIndexPageUseCase();
                 auto httpClient = std::make_shared<Infrastructure::Http::BoostBeastHttpClient>();
                 auto htmlParser = std::make_shared<Infrastructure::Parsers::HtmlParser>();
 
-                CrawlerWorker worker(queue, indexPageUseCase, httpClient, htmlParser, maxDepth);
+                CrawlerWorker worker(workerId, queue, indexPageUseCase, httpClient, htmlParser, maxDepth);
                 worker.run();
             });
         }
