@@ -1,9 +1,52 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <string>
 
 namespace Core::Ports {
+
+/**
+ * @brief HTTP-ответ с телом и заголовками
+ */
+struct HttpResponse {
+    std::string body;
+    std::map<std::string, std::string> headers;
+    int statusCode = 200;
+
+    /**
+     * @brief Создаёт HTML-ответ
+     */
+    static HttpResponse html(const std::string& htmlBody, int status = 200) {
+        HttpResponse response;
+        response.body = htmlBody;
+        response.statusCode = status;
+        response.headers["Content-Type"] = "text/html; charset=utf-8";
+        return response;
+    }
+
+    /**
+     * @brief Создаёт JSON-ответ
+     */
+    static HttpResponse json(const std::string& jsonBody, int status = 200) {
+        HttpResponse response;
+        response.body = jsonBody;
+        response.statusCode = status;
+        response.headers["Content-Type"] = "application/json";
+        return response;
+    }
+
+    /**
+     * @brief Создаёт текстовый ответ
+     */
+    static HttpResponse text(const std::string& textBody, int status = 200) {
+        HttpResponse response;
+        response.body = textBody;
+        response.statusCode = status;
+        response.headers["Content-Type"] = "text/plain; charset=utf-8";
+        return response;
+    }
+};
 
 /**
  * @brief Интерфейс HTTP-сервера
@@ -14,7 +57,7 @@ namespace Core::Ports {
 class IHttpServer {
   public:
     using RequestHandler =
-        std::function<std::string(const std::string& method, const std::string& target, const std::string& body)>;
+        std::function<HttpResponse(const std::string& method, const std::string& target, const std::string& body)>;
 
     virtual ~IHttpServer() = default;
 

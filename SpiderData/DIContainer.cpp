@@ -70,6 +70,21 @@ std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> DIContainer::getI
     return indexPageUseCase_;
 }
 
+std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> DIContainer::createIndexPageUseCase() {
+    // Создаём НОВОЕ подключение к базе данных для этого экземпляра
+    const std::string connectionString = createDatabaseConnectionString();
+    auto dbConnection = std::make_shared<Infrastructure::Database::DatabaseConnection>(connectionString);
+
+    // Создаём новые репозитории с новым подключением
+    auto documentRepository = std::make_shared<Infrastructure::Database::PostgresDocumentRepository>(dbConnection);
+    auto wordRepository = std::make_shared<Infrastructure::Database::PostgresWordRepository>(dbConnection);
+
+    // Создаём новый Use Case с новыми репозиториями
+    // Используем общие (thread-safe) компоненты для парсинга
+    return std::make_shared<Core::Application::UseCases::IndexPageUseCase>(documentRepository, wordRepository,
+                                                                            htmlParser_, textProcessor_);
+}
+
 std::shared_ptr<Core::Ports::IConfiguration> DIContainer::getConfiguration() {
     return configuration_;
 }

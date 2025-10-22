@@ -3,6 +3,7 @@
 #include <string>
 
 #include "../HTTPServerData/DIContainer.h"
+#include "../Core/Ports/IHttpServer.h"
 
 /**
  * @brief Генерирует HTML-страницу с формой поиска
@@ -315,11 +316,11 @@ int main(int argc, char* argv[]) {
         // Обработчик HTTP-запросов
         auto requestHandler = [searchDocumentsUseCase, maxResults](const std::string& method,
                                                                     const std::string& target,
-                                                                    const std::string& body) -> std::string {
+                                                                    const std::string& body) -> Core::Ports::HttpResponse {
             try {
                 // GET / - форма поиска
                 if (method == "GET" && (target == "/" || target == "/search")) {
-                    return generateSearchFormHtml();
+                    return Core::Ports::HttpResponse::html(generateSearchFormHtml());
                 }
 
                 // POST /search - выполнение поиска
@@ -328,30 +329,31 @@ int main(int argc, char* argv[]) {
                     std::string queryString = parseQueryFromBody(body);
 
                     if (queryString.empty()) {
-                        return generateErrorHtml("Пустой поисковый запрос");
+                        return Core::Ports::HttpResponse::html(generateErrorHtml("Пустой поисковый запрос"), 400);
                     }
 
                     // Создаём SearchQuery
                     auto searchQuery = Core::Domain::ValueObject::SearchQuery::create(queryString);
 
                     if (!searchQuery.has_value()) {
-                        return generateErrorHtml(
-                            "Некорректный запрос. Максимум 4 слова, разделённых пробелами.");
+                        return Core::Ports::HttpResponse::html(
+                            generateErrorHtml("Некорректный запрос. Максимум 4 слова, разделённых пробелами."), 400);
                     }
 
                     // Выполняем поиск
                     auto results = searchDocumentsUseCase->execute(searchQuery.value(), maxResults);
 
                     // Возвращаем HTML с результатами
-                    return generateSearchResultsHtml(results, queryString);
+                    return Core::Ports::HttpResponse::html(generateSearchResultsHtml(results, queryString));
                 }
 
                 // Неизвестный запрос
-                return generateErrorHtml("Страница не найдена");
+                return Core::Ports::HttpResponse::html(generateErrorHtml("Страница не найдена"), 404);
 
             } catch (const std::exception& e) {
                 std::cerr << "Ошибка обработки запроса: " << e.what() << std::endl;
-                return generateErrorHtml("Внутренняя ошибка сервера: " + std::string(e.what()));
+                return Core::Ports::HttpResponse::html(
+                    generateErrorHtml("Внутренняя ошибка сервера: " + std::string(e.what())), 500);
             }
         };
 

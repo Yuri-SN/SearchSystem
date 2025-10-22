@@ -7,6 +7,8 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
+#include "../../Core/Ports/IHttpServer.h"
+
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
@@ -131,13 +133,15 @@ void BoostBeastHttpServer::handleSession(tcp::socket socket) {
     }
 
     // Вызываем обработчик запроса
-    std::string responseBody;
+    Core::Ports::HttpResponse httpResponse;
     http::status responseStatus = http::status::ok;
 
     try {
-        responseBody = handler_(std::string(req.method_string()), std::string(req.target()), req.body());
+        httpResponse = handler_(std::string(req.method_string()), std::string(req.target()), req.body());
+        responseStatus = static_cast<http::status>(httpResponse.statusCode);
     } catch (const std::exception& e) {
-        responseBody = R"({"error": "Internal server error"})";
+        httpResponse.body = R"({"error": "Internal server error"})";
+        httpResponse.headers["Content-Type"] = "application/json";
         responseStatus = http::status::internal_server_error;
         std::cerr << "Ошибка обработки запроса: " << e.what() << "\n";
     }
@@ -145,9 +149,14 @@ void BoostBeastHttpServer::handleSession(tcp::socket socket) {
     // Создаём HTTP-ответ
     http::response<http::string_body> res{responseStatus, req.version()};
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(http::field::content_type, "application/json");
+
+    // Устанавливаем все заголовки из HttpResponse
+    for (const auto& [name, value] : httpResponse.headers) {
+        res.set(name, value);
+    }
+
     res.keep_alive(req.keep_alive());
-    res.body() = responseBody;
+    res.body() = httpResponse.body;
     res.prepare_payload();
 
     // Отправляем ответ

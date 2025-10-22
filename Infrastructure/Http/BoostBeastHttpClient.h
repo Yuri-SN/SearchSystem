@@ -63,6 +63,15 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
     };
 
     /**
+     * @brief Структура для хранения HTTP ответа
+     */
+    struct HttpResponse {
+        std::string body;
+        int statusCode;
+        std::string locationHeader;  // Заголовок Location для редиректов
+    };
+
+    /**
      * @brief Парсит URL на составные части
      * @param url URL для парсинга
      * @return Структура с распарсенными компонентами
@@ -72,16 +81,16 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
     /**
      * @brief Выполняет HTTP GET-запрос (без SSL)
      * @param parsedUrl Распарсенный URL
-     * @return Тело ответа и код статуса
+     * @return HTTP ответ (тело, статус, заголовки)
      */
-    std::pair<std::string, int> performHttpGet(const ParsedUrl& parsedUrl) const;
+    HttpResponse performHttpGet(const ParsedUrl& parsedUrl) const;
 
     /**
      * @brief Выполняет HTTPS GET-запрос (с SSL)
      * @param parsedUrl Распарсенный URL
-     * @return Тело ответа и код статуса
+     * @return HTTP ответ (тело, статус, заголовки)
      */
-    std::pair<std::string, int> performHttpsGet(const ParsedUrl& parsedUrl) const;
+    HttpResponse performHttpsGet(const ParsedUrl& parsedUrl) const;
 
     /**
      * @brief Обрабатывает редиректы

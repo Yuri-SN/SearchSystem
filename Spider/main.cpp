@@ -1,5 +1,3 @@
-#include <algorithm>
-#include <atomic>
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
@@ -120,7 +118,7 @@ class CrawlerWorker {
             try {
                 processUrl(url, depth);
             } catch (const std::exception& e) {
-                std::cerr << "Ошибка при обработке " << url << ": " << e.what() << std::endl;
+                std::cerr << "Ошибка при обработке " << url << ": " << e.what() << "\n";
             }
 
             queue_->markCompleted();
@@ -129,13 +127,13 @@ class CrawlerWorker {
 
   private:
     void processUrl(const std::string& url, int depth) {
-        std::cout << "Обработка [глубина " << depth << "]: " << url << std::endl;
+        std::cout << "Обработка [глубина " << depth << "]: " << url << "\n";
 
         // Скачиваем страницу
         auto htmlContent = httpClient_->get(url);
 
         if (!htmlContent.has_value()) {
-            std::cerr << "Не удалось скачать: " << url << std::endl;
+            std::cerr << "Не удалось скачать: " << url << "\n";
             return;
         }
 
@@ -143,17 +141,17 @@ class CrawlerWorker {
         const auto documentId = indexPageUseCase_->execute(url, htmlContent.value());
 
         if (documentId == 0) {
-            std::cerr << "Не удалось проиндексировать: " << url << std::endl;
+            std::cerr << "Не удалось проиндексировать: " << url << "\n";
             return;
         }
 
-        std::cout << "Проиндексирован документ ID=" << documentId << ": " << url << std::endl;
+        std::cout << "Проиндексирован документ ID=" << documentId << ": " << url << "\n";
 
         // Если не достигли максимальной глубины - извлекаем ссылки
         if (depth < maxDepth_) {
             auto links = htmlParser_->extractLinks(htmlContent.value(), url);
 
-            std::cout << "Найдено ссылок: " << links.size() << " на странице " << url << std::endl;
+            std::cout << "Найдено ссылок: " << links.size() << " на странице " << url << "\n";
 
             for (const auto& link : links) {
                 queue_->push(link, depth + 1);
@@ -170,8 +168,7 @@ class CrawlerWorker {
 
 int main(int argc, char* argv[]) {
     try {
-        std::cout << "=== Поисковая система - Программа Паук ===" << std::endl;
-        std::cout << std::endl;
+        std::cout << "=== Поисковая система - Программа Паук ===" << "\n\n";
 
         // Определяем путь к конфигурации
         std::string configPath = "config.ini";
@@ -179,7 +176,7 @@ int main(int argc, char* argv[]) {
             configPath = argv[1];
         }
 
-        std::cout << "Загрузка конфигурации из: " << configPath << std::endl;
+        std::cout << "Загрузка конфигурации из: " << configPath << "\n";
 
         // Создаём DI контейнер
         SpiderData::DIContainer container(configPath);
@@ -190,10 +187,10 @@ int main(int argc, char* argv[]) {
         const int maxDepth = config->getSpiderCrawlDepth();
         const int threadPoolSize = config->getSpiderThreadPoolSize();
 
-        std::cout << "Стартовый URL: " << startUrl << std::endl;
-        std::cout << "Глубина рекурсии: " << maxDepth << std::endl;
-        std::cout << "Размер пула потоков: " << threadPoolSize << std::endl;
-        std::cout << std::endl;
+        std::cout << "Стартовый URL: " << startUrl << "\n";
+        std::cout << "Глубина рекурсии: " << maxDepth << "\n";
+        std::cout << "Размер пула потоков: " << threadPoolSize << "\n";
+        std::cout << "\n";
 
         // Создаём многопоточную очередь
         auto queue = std::make_shared<CrawlQueue>();
@@ -205,20 +202,21 @@ int main(int argc, char* argv[]) {
         std::vector<std::thread> threads;
         threads.reserve(threadPoolSize);
 
-        std::cout << "Запуск " << threadPoolSize << " потоков краулера..." << std::endl;
-        std::cout << std::endl;
+        std::cout << "Запуск " << threadPoolSize << " потоков краулера...\n";
+        std::cout << "\n";
 
-        // Получаем зависимости из контейнера
-        auto indexPageUseCase = container.getIndexPageUseCase();
-
-        // Создаём HTTP клиент и HTML парсер для каждого потока
-        // (для простоты используем общие компоненты, но можно создавать для каждого потока отдельно)
-        auto httpClient = std::make_shared<Infrastructure::Http::BoostBeastHttpClient>();
-        auto htmlParser = std::make_shared<Infrastructure::Parsers::HtmlParser>();
+        // ВАЖНО: Каждый поток должен использовать свой собственный IndexPageUseCase
+        // с отдельным подключением к БД, чтобы избежать конфликтов транзакций
 
         // Запускаем рабочие потоки
         for (int i = 0; i < threadPoolSize; ++i) {
-            threads.emplace_back([queue, indexPageUseCase, httpClient, htmlParser, maxDepth]() {
+            threads.emplace_back([&container, queue, maxDepth]() {
+                // Каждый поток создаёт свой собственный IndexPageUseCase
+                // с отдельным подключением к БД
+                auto indexPageUseCase = container.createIndexPageUseCase();
+                auto httpClient = std::make_shared<Infrastructure::Http::BoostBeastHttpClient>();
+                auto htmlParser = std::make_shared<Infrastructure::Parsers::HtmlParser>();
+
                 CrawlerWorker worker(queue, indexPageUseCase, httpClient, htmlParser, maxDepth);
                 worker.run();
             });
@@ -229,14 +227,14 @@ int main(int argc, char* argv[]) {
             thread.join();
         }
 
-        std::cout << std::endl;
-        std::cout << "=== Краулинг завершён ===" << std::endl;
-        std::cout << "Всего обработано URL: " << queue->getVisitedCount() << std::endl;
+        std::cout << "\n";
+        std::cout << "=== Краулинг завершён ===" << "\n";
+        std::cout << "Всего обработано URL: " << queue->getVisitedCount() << "\n";
 
         return 0;
 
     } catch (const std::exception& e) {
-        std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: " << e.what() << std::endl;
+        std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: " << e.what() << "\n";
         return 1;
     }
 }

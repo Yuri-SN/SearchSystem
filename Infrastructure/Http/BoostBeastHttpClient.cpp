@@ -33,18 +33,16 @@ bool BoostBeastHttpClient::isAccessible(const std::string& url) {
     }
 
     try {
-        int statusCode = 0;
+        HttpResponse response;
 
         if (parsedUrl.scheme == "https") {
-            auto [body, code] = performHttpsGet(parsedUrl);
-            statusCode = code;
+            response = performHttpsGet(parsedUrl);
         } else {
-            auto [body, code] = performHttpGet(parsedUrl);
-            statusCode = code;
+            response = performHttpGet(parsedUrl);
         }
 
         // Считаем URL доступным, если статус 2xx или 3xx
-        return statusCode >= HTTP_STATUS_OK && statusCode < HTTP_STATUS_BAD_REQUEST;
+        return response.statusCode >= HTTP_STATUS_OK && response.statusCode < HTTP_STATUS_BAD_REQUEST;
     } catch (const std::exception& e) {
         return false;
     }
@@ -81,7 +79,7 @@ BoostBeastHttpClient::ParsedUrl BoostBeastHttpClient::parseUrl(const std::string
     return result;
 }
 
-std::pair<std::string, int> BoostBeastHttpClient::performHttpGet(const ParsedUrl& parsedUrl) const {
+BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpGet(const ParsedUrl& parsedUrl) const {
     try {
         // IO context для всех I/O операций
         net::io_context ioc;
@@ -114,14 +112,24 @@ std::pair<std::string, int> BoostBeastHttpClient::performHttpGet(const ParsedUrl
         beast::error_code errc;
         stream.socket().shutdown(tcp::socket::shutdown_both, errc);
 
-        return {res.body(), static_cast<int>(res.result_int())};
+        // Извлекаем заголовок Location (для редиректов)
+        HttpResponse response;
+        response.body = res.body();
+        response.statusCode = static_cast<int>(res.result_int());
+
+        auto locationIt = res.find(http::field::location);
+        if (locationIt != res.end()) {
+            response.locationHeader = std::string(locationIt->value());
+        }
+
+        return response;
     } catch (const std::exception& e) {
         std::cerr << "HTTP ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what() << "\n";
-        return {"", 0};
+        return {"", 0, ""};
     }
 }
 
-std::pair<std::string, int> BoostBeastHttpClient::performHttpsGet(const ParsedUrl& parsedUrl) const {
+BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const ParsedUrl& parsedUrl) const {
     try {
         // IO context для всех I/O операций
         net::io_context ioc;
@@ -174,10 +182,20 @@ std::pair<std::string, int> BoostBeastHttpClient::performHttpsGet(const ParsedUr
         // Игнорируем ошибки при закрытии SSL (некоторые серверы закрывают
         // соединение некорректно)
 
-        return {res.body(), static_cast<int>(res.result_int())};
+        // Извлекаем заголовок Location (для редиректов)
+        HttpResponse response;
+        response.body = res.body();
+        response.statusCode = static_cast<int>(res.result_int());
+
+        auto locationIt = res.find(http::field::location);
+        if (locationIt != res.end()) {
+            response.locationHeader = std::string(locationIt->value());
+        }
+
+        return response;
     } catch (const std::exception& e) {
         std::cerr << "HTTPS ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what() << "\n";
-        return {"", 0};
+        return {"", 0, ""};
     }
 }
 
@@ -194,36 +212,49 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
     }
 
     try {
-        std::string body;
-        int statusCode = 0;
+        HttpResponse response;
 
         if (parsedUrl.scheme == "https") {
-            auto [responseBody, code] = performHttpsGet(parsedUrl);
-            body = responseBody;
-            statusCode = code;
+            response = performHttpsGet(parsedUrl);
         } else {
-            auto [responseBody, code] = performHttpGet(parsedUrl);
-            body = responseBody;
-            statusCode = code;
+            response = performHttpGet(parsedUrl);
         }
 
         // Проверяем статус ответа
-        if (statusCode >= HTTP_STATUS_OK && statusCode < HTTP_STATUS_MULTIPLE_CHOICES) {
+        if (response.statusCode >= HTTP_STATUS_OK && response.statusCode < HTTP_STATUS_MULTIPLE_CHOICES) {
             // Успешный ответ (2xx)
-            return body;
+            return response.body;
         }
 
-        if (statusCode >= HTTP_STATUS_MULTIPLE_CHOICES && statusCode < HTTP_STATUS_BAD_REQUEST) {
+        if (response.statusCode >= HTTP_STATUS_MULTIPLE_CHOICES && response.statusCode < HTTP_STATUS_BAD_REQUEST) {
             // Редирект (3xx)
-            // Нужно извлечь Location заголовок из ответа
-            // Для простоты реализации возвращаем текущий body
-            // В полной реализации нужно парсить заголовки из response
-            std::cerr << "Редирект обнаружен для " << url << ", но обработка Location не реализована\n";
-            return body;
+            if (response.locationHeader.empty()) {
+                std::cerr << "Редирект обнаружен для " << url << ", но заголовок Location отсутствует\n";
+                return response.body;
+            }
+
+            // Определяем абсолютный URL для редиректа
+            std::string redirectUrl = response.locationHeader;
+
+            // Если Location содержит относительный путь, строим абсолютный URL
+            if (redirectUrl[0] == '/') {
+                // Относительный путь от корня
+                redirectUrl = parsedUrl.scheme + "://" + parsedUrl.host + redirectUrl;
+            } else if (redirectUrl.substr(0, 4) != "http") {
+                // Относительный путь от текущего
+                const size_t lastSlash = parsedUrl.path.find_last_of('/');
+                const std::string basePath = (lastSlash != std::string::npos) ? parsedUrl.path.substr(0, lastSlash + 1) : "/";
+                redirectUrl = parsedUrl.scheme + "://" + parsedUrl.host + basePath + redirectUrl;
+            }
+
+            std::cerr << "Редирект: " << url << " -> " << redirectUrl << "\n";
+
+            // Рекурсивно следуем по редиректу
+            return handleRedirect(redirectUrl, redirectCount + 1);
         }
 
         // Ошибка клиента (4xx) или сервера (5xx)
-        std::cerr << "HTTP ошибка " << statusCode << " для " << url << "\n";
+        std::cerr << "HTTP ошибка " << response.statusCode << " для " << url << "\n";
         return std::nullopt;
 
     } catch (const std::exception& e) {

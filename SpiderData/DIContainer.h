@@ -36,10 +36,19 @@ class DIContainer {
     DIContainer& operator=(DIContainer&&) = delete;
 
     /**
-     * @brief Получить Use Case для индексации страниц
+     * @brief Получить Use Case для индексации страниц (singleton)
      * @return Shared pointer на IndexPageUseCase
      */
     std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> getIndexPageUseCase();
+
+    /**
+     * @brief Создать новый Use Case для индексации страниц
+     * Создаёт новый экземпляр с собственным подключением к БД.
+     * Используется для многопоточной работы, где каждый поток должен иметь
+     * своё собственное подключение к БД.
+     * @return Shared pointer на новый IndexPageUseCase
+     */
+    std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> createIndexPageUseCase();
 
     /**
      * @brief Получить конфигурацию
