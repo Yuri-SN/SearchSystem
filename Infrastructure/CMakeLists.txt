@@ -38,6 +38,8 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE Boost::locale
     PRIVATE Boost::system
     PRIVATE Boost::thread
+    PRIVATE OpenSSL::SSL
+    PRIVATE OpenSSL::Crypto
     PRIVATE PkgConfig::PQXX
     PRIVATE PkgConfig::GUMBO
 )

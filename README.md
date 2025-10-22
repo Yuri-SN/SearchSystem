@@ -101,38 +101,44 @@ SearchSystem/
 │   │   ├── ITextProcessor.h
 │   │   └── IConfiguration.h
 │   ├── DTO/                        # Data Transfer Objects
-│   │   ├── CrawlResultDto.h
-│   │   ├── SearchRequestDto.h
-│   │   └── SearchResponseDto.h
+│   │   ├── SearchRequestDTO.h/cpp
+│   │   └── SearchResponseDTO.h/cpp
 │   └── CMakeLists.txt              # → libCore.a
 │
 ├── Infrastructure/                 # Слой инфраструктуры (адаптеры)
-│   ├── Adapters/                   # Реализации портов
-│   │   ├── PostgresRepository.cpp
-│   │   └── ...
-│   ├── DTO/                        # DTO для инфраструктуры
+│   ├── Configuration/              # Конфигурация
+│   │   ├── IniConfiguration.h/cpp
+│   ├── Text/                       # Обработка текста
+│   │   └── BoostLocaleTextProcessor.h/cpp
+│   ├── Parsers/                    # Парсеры
+│   │   └── HtmlParser.h/cpp (gumbo-parser)
+│   ├── Database/                   # База данных
+│   │   ├── DatabaseConnection.h/cpp
+│   │   ├── PostgresDocumentRepository.h/cpp
+│   │   └── PostgresWordRepository.h/cpp
+│   ├── Http/                       # HTTP клиент и сервер
+│   │   ├── BoostBeastHttpClient.h/cpp
+│   │   └── BoostBeastHttpServer.h/cpp
 │   └── CMakeLists.txt              # → libInfrastructure.a
 │
 ├── Spider/                         # Приложение "Паук"
-│   ├── main.cpp                    # Точка входа
+│   ├── main.cpp                    # Точка входа (многопоточный краулер)
 │   └── CMakeLists.txt              # → Spider (executable)
 │
 ├── SpiderData/                     # DI-контейнер для Spider
-│   ├── DIContainer.cpp             # Композиция зависимостей
+│   ├── DIContainer.h/cpp           # Композиция зависимостей
 │   └── CMakeLists.txt              # → libSpiderData.a
 │
 ├── HTTPServer/                     # Приложение "Поисковик"
-│   ├── main.cpp                    # Точка входа
+│   ├── main.cpp                    # Точка входа (HTTP-сервер + HTML генерация)
 │   └── CMakeLists.txt              # → HTTPServer (executable)
 │
 ├── HTTPServerData/                 # DI-контейнер для HTTPServer
-│   ├── DIContainer.cpp             # Композиция зависимостей
+│   ├── DIContainer.h/cpp           # Композиция зависимостей
 │   └── CMakeLists.txt              # → libHTTPServerData.a
 │
-├── CommonFiles/                    # Вспомогательные файлы
-│   ├── config.ini                  # Конфигурационный файл
-│   └── README.md                   # Этот файл
-│
+├── config.ini                      # Конфигурационный файл
+├── README.md                       # Этот файл
 └── CMakeLists.txt                  # Корневой CMake
 ```
 
@@ -144,16 +150,20 @@ Spider (executable)
        ├─> libCore.a
        └─> libInfrastructure.a
             ├─> libCore.a
-            ├─> Boost (locale, system, thread; beast - header-only)
-            └─> libpqxx (PostgreSQL)
+            ├─> Boost (locale, system, thread)
+            ├─> OpenSSL (ssl, crypto) - для HTTPS
+            ├─> libpqxx (PostgreSQL)
+            └─> gumbo-parser (HTML парсинг)
 
 HTTPServer (executable)
   └─> libHTTPServerData.a
        ├─> libCore.a
        └─> libInfrastructure.a
             ├─> libCore.a
-            ├─> Boost (locale, system, thread; beast - header-only)
-            └─> libpqxx (PostgreSQL)
+            ├─> Boost (locale, system, thread)
+            ├─> OpenSSL (ssl, crypto) - для HTTPS
+            ├─> libpqxx (PostgreSQL)
+            └─> gumbo-parser (HTML парсинг)
 ```
 
 ## Принципы Clean Architecture
@@ -193,7 +203,9 @@ Infrastructure → Application → Domain
 - **Сборка:** CMake 3.16+
 - **База данных:** PostgreSQL (libpqxx 7.10+)
 - **HTTP:** Boost Beast (Boost 1.88+)
+- **SSL/TLS:** OpenSSL 3.5+ (для HTTPS)
 - **Локализация:** Boost Locale
+- **HTML парсинг:** gumbo-parser 0.13+
 - **Конфигурация:** INI-файлы
 
 ## Компоненты системы
@@ -239,13 +251,20 @@ Infrastructure → Application → Domain
 5. Сохраняет индексы в PostgreSQL
 6. Использует пул потоков для параллельной обработки
 
+**Многопоточная архитектура:**
+
+- `CrawlQueue` - потокобезопасная очередь URL с защитой от дубликатов
+- `CrawlerWorker` - рабочий поток для обработки URL
+- Пул потоков (размер настраивается в `config.ini`)
+- Автоматическое завершение при опустошении очереди
+
 **Конфигурация (config.ini):**
 
 ```ini
 [spider]
 start_url=https://example.com
-crawl_depth=3
-thread_pool_size=10
+crawl_depth=3              # 1 = только стартовая страница
+thread_pool_size=10        # количество параллельных потоков
 ```
 
 ### HTTPServer (поисковик)
@@ -257,12 +276,24 @@ thread_pool_size=10
 3. Ранжирует результаты по релевантности (сумма частот слов)
 4. Ограничивает выдачу (по умолчанию 10 результатов)
 
+**HTTP API:**
+
+- `GET /` или `GET /search` → HTML-страница с формой поиска
+- `POST /search` → HTML-страница с результатами поиска
+
+**HTML-страницы:**
+
+- Форма поиска с полем ввода и кнопкой
+- Результаты с кликабельными ссылками и релевантностью
+- Сообщение "ничего не найдено" при отсутствии результатов
+- Страница ошибки для некорректных запросов
+
 **Конфигурация (config.ini):**
 
 ```ini
 [http_server]
-port=8080
-max_results=10
+port=8080              # порт HTTP-сервера
+max_results=10         # максимум результатов в выдаче
 ```
 
 ## База данных
@@ -311,10 +342,11 @@ password=your_password
 
 - C++17 или выше
 - CMake 3.16+
-- Boost 1.88+ (system, locale, beast)
+- Boost 1.88+ (system, locale, thread)
+- OpenSSL 3.5+ (для HTTPS-поддержки)
 - PostgreSQL 12+
 - libpqxx 7.10+
-- gumbo-parser (для парсинга HTML)
+- gumbo-parser 0.13+ (для парсинга HTML)
 
 ## Установка зависимостей
 
@@ -328,6 +360,7 @@ sudo apt install -y \
     libboost-locale-dev \
     libboost-system-dev \
     libboost-thread-dev \
+    libssl-dev \
     libpqxx-dev \
     libpq-dev \
     postgresql \
@@ -345,7 +378,7 @@ cd vcpkg
 .\bootstrap-vcpkg.bat
 
 # Установка зависимостей
-.\vcpkg install boost-locale boost-system boost-thread libpqxx gumbo
+.\vcpkg install boost-locale boost-system boost-thread openssl libpqxx gumbo
 
 # Интеграция с Visual Studio
 .\vcpkg integrate install
@@ -365,7 +398,7 @@ cmake --build build
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Установка зависимостей
-brew install boost libpqxx postgresql gumbo-parser
+brew install boost openssl libpqxx postgresql gumbo-parser
 ```
 
 ## Сборка проекта
@@ -438,21 +471,56 @@ port=8080
 max_results=10
 ```
 
-### 3. Запуск Spider
+### 3. Запуск Spider (краулера)
 
 ```bash
-./build/Spider
+./build/Spider/Spider
 ```
 
 Spider начнёт индексацию с `start_url` и сохранит данные в БД.
 
-### 4. Запуск HTTPServer
+**Пример вывода:**
+
+```
+=== Поисковая система - Программа Паук ===
+
+Загрузка конфигурации из: config.ini
+Стартовый URL: https://example.com
+Глубина рекурсии: 3
+Размер пула потоков: 10
+
+Запуск 10 потоков краулера...
+
+Обработка [глубина 1]: https://example.com
+Проиндексирован документ ID=1: https://example.com
+Найдено ссылок: 15 на странице https://example.com
+...
+
+=== Краулинг завершён ===
+Всего обработано URL: 127
+```
+
+### 4. Запуск HTTPServer (поисковика)
 
 ```bash
-./build/HTTPServer
+./build/HTTPServer/HTTPServer
 ```
 
 Поисковик будет доступен по адресу `http://localhost:8080`
+
+**Пример вывода:**
+
+```
+=== Поисковая система - HTTP Сервер ===
+
+Загрузка конфигурации из: config.ini
+Порт HTTP-сервера: 8080
+Максимум результатов: 10
+
+Запуск HTTP-сервера на порту 8080...
+Откройте браузер: http://localhost:8080/
+Для остановки нажмите Ctrl+C
+```
 
 ## Использование
 
@@ -472,3 +540,55 @@ Spider начнёт индексацию с `start_url` и сохранит да
 - Документ A: "привет" встречается 10 раз, "мир" - 4 раза → релевантность = 14
 - Документ B: "привет" встречается 3 раза, "мир" - 8 раз → релевантность = 11
 - Результат: Документ A выше в выдаче
+
+## Ключевые особенности реализации
+
+### Индексация (Spider)
+
+- **Многопоточность**: Потокобезопасная очередь URL с `std::mutex` и `std::condition_variable`
+- **Защита от дубликатов**: `std::set` для отслеживания посещённых URL
+- **Глубина рекурсии**: Контроль глубины обхода ссылок
+- **HTML-парсинг**: gumbo-parser от Google для надёжного извлечения текста и ссылок
+- **Обработка текста**: Boost.Locale для корректной работы с UTF-8 и русской локалью
+- **Фильтрация слов**: Отбрасываются слова короче 3 и длиннее 32 символов
+
+### Поиск (HTTPServer)
+
+- **Асинхронный HTTP**: Boost.Beast с Boost.Asio для многопоточной обработки запросов
+- **SQL-оптимизация**: JOIN-запросы с индексами для быстрого поиска
+- **Ранжирование**: Сортировка по сумме частот слов (ORDER BY relevance DESC)
+- **Валидация**: Проверка запроса на максимум 4 слова
+- **HTML-генерация**: Встроенные HTML-шаблоны с CSS-стилями
+
+### База данных
+
+- **Автоматическое создание схемы**: CREATE TABLE IF NOT EXISTS при первом запуске
+- **Связь многие-ко-многим**: Промежуточная таблица word_frequencies
+- **Индексы**: Ускорение поиска по url и text
+- **ON CONFLICT**: Атомарные UPDATE/INSERT операции
+- **Транзакции**: Все операции обёрнуты в транзакции
+
+### Clean Architecture
+
+- **Разделение ответственности**: Domain → Application → Infrastructure
+- **Dependency Inversion**: Infrastructure зависит от Core, а не наоборот
+- **Тестируемость**: Все зависимости инжектируются через интерфейсы
+- **Независимость от фреймворков**: Core не знает о Boost, PostgreSQL, OpenSSL
+
+## Статистика проекта
+
+- **Строк кода**: ~5000+ строк C++
+- **Файлов**: 60+ файлов
+- **Слоёв архитектуры**: 4 (Core, Infrastructure, DI Containers, Applications)
+- **Use Cases**: 2 (IndexPageUseCase, SearchDocumentsUseCase)
+- **Domain Services**: 2 (IndexingService, RankingService)
+- **Infrastructure компонентов**: 8
+- **Исполняемых файлов**: 2 (Spider, HTTPServer)
+
+## Лицензия
+
+Дипломный проект для курса «Разработчик C++» (Нетология)
+
+## Автор
+
+Юрий - студент курса «Разработчик C++»

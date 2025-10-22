@@ -1,7 +1,242 @@
+#include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
+#include <queue>
+#include <set>
+#include <thread>
+#include <vector>
 
-int main() {
-    std::cout << "Hello from Spider!\n";
+#include "../Infrastructure/Http/BoostBeastHttpClient.h"
+#include "../Infrastructure/Parsers/HtmlParser.h"
+#include "../SpiderData/DIContainer.h"
 
-    return 0;
+/**
+ * @brief Многопоточная очередь URL для краулинга
+ */
+class CrawlQueue {
+  public:
+    /**
+     * @brief Добавляет URL в очередь с указанной глубиной
+     */
+    void push(const std::string& url, int depth) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // Проверяем, не обрабатывали ли мы уже этот URL
+        if (visited_.count(url) > 0) {
+            return;
+        }
+
+        queue_.push({url, depth});
+        visited_.insert(url);
+        cv_.notify_one();
+    }
+
+    /**
+     * @brief Извлекает URL из очереди (блокирующая операция)
+     * @return Пара {url, depth} или nullopt если очередь пуста и работа завершена
+     */
+    std::optional<std::pair<std::string, int>> pop() {
+        std::unique_lock<std::mutex> lock(mutex_);
+
+        cv_.wait(lock, [this] { return !queue_.empty() || done_; });
+
+        if (queue_.empty()) {
+            return std::nullopt;
+        }
+
+        auto item = queue_.front();
+        queue_.pop();
+        activeCount_++;
+
+        return item;
+    }
+
+    /**
+     * @brief Отмечает завершение обработки одного URL
+     */
+    void markCompleted() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        activeCount_--;
+
+        // Если очередь пуста и нет активных задач - работа завершена
+        if (queue_.empty() && activeCount_ == 0) {
+            done_ = true;
+            cv_.notify_all();
+        }
+    }
+
+    /**
+     * @brief Проверяет, завершена ли работа
+     */
+    bool isDone() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return done_ && queue_.empty() && activeCount_ == 0;
+    }
+
+    /**
+     * @brief Получить количество обработанных URL
+     */
+    size_t getVisitedCount() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return visited_.size();
+    }
+
+  private:
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    std::queue<std::pair<std::string, int>> queue_;  // {url, depth}
+    std::set<std::string> visited_;
+    int activeCount_ = 0;
+    bool done_ = false;
+};
+
+/**
+ * @brief Рабочий поток краулера
+ */
+class CrawlerWorker {
+  public:
+    CrawlerWorker(std::shared_ptr<CrawlQueue> queue,
+                  std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> indexPageUseCase,
+                  std::shared_ptr<Core::Ports::IHttpClient> httpClient,
+                  std::shared_ptr<Core::Ports::IHtmlParser> htmlParser, int maxDepth)
+        : queue_(std::move(queue)),
+          indexPageUseCase_(std::move(indexPageUseCase)),
+          httpClient_(std::move(httpClient)),
+          htmlParser_(std::move(htmlParser)),
+          maxDepth_(maxDepth) {}
+
+    void run() {
+        while (true) {
+            auto item = queue_->pop();
+
+            if (!item.has_value()) {
+                break;  // Очередь пуста и работа завершена
+            }
+
+            const auto& [url, depth] = item.value();
+
+            try {
+                processUrl(url, depth);
+            } catch (const std::exception& e) {
+                std::cerr << "Ошибка при обработке " << url << ": " << e.what() << std::endl;
+            }
+
+            queue_->markCompleted();
+        }
+    }
+
+  private:
+    void processUrl(const std::string& url, int depth) {
+        std::cout << "Обработка [глубина " << depth << "]: " << url << std::endl;
+
+        // Скачиваем страницу
+        auto htmlContent = httpClient_->get(url);
+
+        if (!htmlContent.has_value()) {
+            std::cerr << "Не удалось скачать: " << url << std::endl;
+            return;
+        }
+
+        // Индексируем страницу
+        const auto documentId = indexPageUseCase_->execute(url, htmlContent.value());
+
+        if (documentId == 0) {
+            std::cerr << "Не удалось проиндексировать: " << url << std::endl;
+            return;
+        }
+
+        std::cout << "Проиндексирован документ ID=" << documentId << ": " << url << std::endl;
+
+        // Если не достигли максимальной глубины - извлекаем ссылки
+        if (depth < maxDepth_) {
+            auto links = htmlParser_->extractLinks(htmlContent.value(), url);
+
+            std::cout << "Найдено ссылок: " << links.size() << " на странице " << url << std::endl;
+
+            for (const auto& link : links) {
+                queue_->push(link, depth + 1);
+            }
+        }
+    }
+
+    std::shared_ptr<CrawlQueue> queue_;
+    std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> indexPageUseCase_;
+    std::shared_ptr<Core::Ports::IHttpClient> httpClient_;
+    std::shared_ptr<Core::Ports::IHtmlParser> htmlParser_;
+    int maxDepth_;
+};
+
+int main(int argc, char* argv[]) {
+    try {
+        std::cout << "=== Поисковая система - Программа Паук ===" << std::endl;
+        std::cout << std::endl;
+
+        // Определяем путь к конфигурации
+        std::string configPath = "config.ini";
+        if (argc > 1) {
+            configPath = argv[1];
+        }
+
+        std::cout << "Загрузка конфигурации из: " << configPath << std::endl;
+
+        // Создаём DI контейнер
+        SpiderData::DIContainer container(configPath);
+
+        // Получаем конфигурацию
+        auto config = container.getConfiguration();
+        const std::string startUrl = config->getSpiderStartUrl();
+        const int maxDepth = config->getSpiderCrawlDepth();
+        const int threadPoolSize = config->getSpiderThreadPoolSize();
+
+        std::cout << "Стартовый URL: " << startUrl << std::endl;
+        std::cout << "Глубина рекурсии: " << maxDepth << std::endl;
+        std::cout << "Размер пула потоков: " << threadPoolSize << std::endl;
+        std::cout << std::endl;
+
+        // Создаём многопоточную очередь
+        auto queue = std::make_shared<CrawlQueue>();
+
+        // Добавляем стартовый URL
+        queue->push(startUrl, 1);
+
+        // Создаём пул потоков
+        std::vector<std::thread> threads;
+        threads.reserve(threadPoolSize);
+
+        std::cout << "Запуск " << threadPoolSize << " потоков краулера..." << std::endl;
+        std::cout << std::endl;
+
+        // Получаем зависимости из контейнера
+        auto indexPageUseCase = container.getIndexPageUseCase();
+
+        // Создаём HTTP клиент и HTML парсер для каждого потока
+        // (для простоты используем общие компоненты, но можно создавать для каждого потока отдельно)
+        auto httpClient = std::make_shared<Infrastructure::Http::BoostBeastHttpClient>();
+        auto htmlParser = std::make_shared<Infrastructure::Parsers::HtmlParser>();
+
+        // Запускаем рабочие потоки
+        for (int i = 0; i < threadPoolSize; ++i) {
+            threads.emplace_back([queue, indexPageUseCase, httpClient, htmlParser, maxDepth]() {
+                CrawlerWorker worker(queue, indexPageUseCase, httpClient, htmlParser, maxDepth);
+                worker.run();
+            });
+        }
+
+        // Ждём завершения всех потоков
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        std::cout << std::endl;
+        std::cout << "=== Краулинг завершён ===" << std::endl;
+        std::cout << "Всего обработано URL: " << queue->getVisitedCount() << std::endl;
+
+        return 0;
+
+    } catch (const std::exception& e) {
+        std::cerr << "КРИТИЧЕСКАЯ ОШИБКА: " << e.what() << std::endl;
+        return 1;
+    }
 }
