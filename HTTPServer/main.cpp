@@ -1,9 +1,7 @@
 #include <iostream>
 
-using namespace std;
-
 int main() {
-    cout << "Hello World!\n";
+    std::cout << "Hello from HTTP server!\n";
 
     return 0;
 }
