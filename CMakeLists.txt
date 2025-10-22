@@ -20,8 +20,6 @@ include(GNUInstallDirs)
 
 add_custom_target(CommonFiles SOURCES config.ini README.md)
 
-configure_file(config.ini ${CMAKE_BINARY_DIR}/config.ini COPYONLY)
-
 add_subdirectory(Core)
 add_subdirectory(Infrastructure)
 add_subdirectory(SpiderData)
