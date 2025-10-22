@@ -28,6 +28,12 @@ class IHttpClient {
      * @return true если URL доступен
      */
     virtual bool isAccessible(const std::string& url) = 0;
+
+    /**
+     * @brief Устанавливает ID рабочего потока для логирования
+     * @param workerId Номер потока (1, 2, 3...)
+     */
+    virtual void setWorkerId(int workerId) = 0;
 };
 
 } // namespace Core::Ports

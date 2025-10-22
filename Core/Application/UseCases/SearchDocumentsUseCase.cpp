@@ -9,10 +9,12 @@ SearchDocumentsUseCase::SearchDocumentsUseCase(std::shared_ptr<Ports::IWordRepos
 std::vector<Domain::Model::SearchResult> SearchDocumentsUseCase::execute(
     const Domain::ValueObject::SearchQuery& query,
     size_t maxResults) {
-    // Приводим термы запроса к нижнему регистру
+    // Нормализуем и приводим термы запроса к нижнему регистру
+    // (так же, как при индексации документов)
     std::vector<std::string> terms;
     for (const auto& term : query.getTerms()) {
-        terms.push_back(textProcessor_->toLowercase(term));
+        std::string normalized = textProcessor_->normalize(term);
+        terms.push_back(textProcessor_->toLowercase(normalized));
     }
 
     // Ищем документы

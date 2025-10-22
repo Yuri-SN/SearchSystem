@@ -10,6 +10,7 @@
 #include <boost/beast/version.hpp>
 #include <iostream>
 #include <regex>
+#include <sstream>
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -20,7 +21,12 @@ using tcp = boost::asio::ip::tcp;
 
 namespace Infrastructure::Http {
 
+
 BoostBeastHttpClient::BoostBeastHttpClient(std::chrono::seconds timeout) : timeout_(timeout) {}
+
+void BoostBeastHttpClient::setWorkerId(int workerId) {
+    workerId_ = workerId;
+}
 
 std::optional<std::string> BoostBeastHttpClient::get(const std::string& url) {
     return handleRedirect(url, 0);
@@ -229,7 +235,7 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
         if (response.statusCode >= HTTP_STATUS_MULTIPLE_CHOICES && response.statusCode < HTTP_STATUS_BAD_REQUEST) {
             // Редирект (3xx)
             if (response.locationHeader.empty()) {
-                std::cerr << "Редирект обнаружен для " << url << ", но заголовок Location отсутствует\n";
+                std::cerr << getLogPrefix() << "Редирект обнаружен для " << url << ", но заголовок Location отсутствует\n";
                 return response.body;
             }
 
@@ -247,20 +253,29 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
                 redirectUrl = parsedUrl.scheme + "://" + parsedUrl.host + basePath + redirectUrl;
             }
 
-            std::cerr << "Редирект: " << url << " -> " << redirectUrl << "\n";
+            std::cerr << getLogPrefix() << "Редирект: " << url << " -> " << redirectUrl << "\n";
 
             // Рекурсивно следуем по редиректу
             return handleRedirect(redirectUrl, redirectCount + 1);
         }
 
         // Ошибка клиента (4xx) или сервера (5xx)
-        std::cerr << "HTTP ошибка " << response.statusCode << " для " << url << "\n";
+        std::cerr << getLogPrefix() << "HTTP ошибка " << response.statusCode << " для " << url << "\n";
         return std::nullopt;
 
     } catch (const std::exception& e) {
-        std::cerr << "Исключение при запросе " << url << ": " << e.what() << "\n";
+        std::cerr << getLogPrefix() << "Исключение при запросе " << url << ": " << e.what() << "\n";
         return std::nullopt;
     }
+}
+
+std::string BoostBeastHttpClient::getLogPrefix() const {
+    if (workerId_ == 0) {
+        return "";  // Не установлен workerId
+    }
+    std::ostringstream oss;
+    oss << "[Поток " << workerId_ << "] ";
+    return oss.str();
 }
 
 } // namespace Infrastructure::Http

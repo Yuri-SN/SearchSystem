@@ -104,7 +104,10 @@ class CrawlerWorker {
           indexPageUseCase_(std::move(indexPageUseCase)),
           httpClient_(std::move(httpClient)),
           htmlParser_(std::move(htmlParser)),
-          maxDepth_(maxDepth) {}
+          maxDepth_(maxDepth) {
+        // Устанавливаем ID потока для логирования в HTTP клиенте
+        httpClient_->setWorkerId(workerId_);
+    }
 
     void run() {
         while (true) {

@@ -39,8 +39,15 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      */
     bool isAccessible(const std::string& url) override;
 
+    /**
+     * @brief Устанавливает ID рабочего потока для логирования
+     * @param workerId Номер потока (1, 2, 3...)
+     */
+    void setWorkerId(int workerId) override;
+
   private:
     std::chrono::seconds timeout_;
+    int workerId_ = 0;  // ID рабочего потока для логирования
 
     static constexpr int MAX_REDIRECTS = 10;
     static constexpr int HTTP_VERSION = 11;
@@ -99,6 +106,12 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      * @return Содержимое страницы после редиректа
      */
     std::optional<std::string> handleRedirect(const std::string& location, int redirectCount);
+
+    /**
+     * @brief Формирует префикс лог-сообщения с ID потока
+     * @return Строка вида "[Поток X] " для логов
+     */
+    std::string getLogPrefix() const;
 };
 
 } // namespace Infrastructure::Http
