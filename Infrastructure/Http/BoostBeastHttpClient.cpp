@@ -94,12 +94,12 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpGet(const Pa
         tcp::resolver resolver(ioc);
         const auto results = resolver.resolve(parsedUrl.host, parsedUrl.port);
 
-        // Создаём и подключаем сокет
+        // Создаём сокет и устанавливаем таймаут
         beast::tcp_stream stream(ioc);
-        stream.connect(results);
-
-        // Устанавливаем таймаут
         stream.expires_after(timeout_);
+
+        // Подключаемся с таймаутом
+        stream.connect(results);
 
         // Формируем HTTP GET запрос
         http::request<http::string_body> req{http::verb::get, parsedUrl.path, HTTP_VERSION};
@@ -154,19 +154,19 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const P
         // Создаём SSL stream
         beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
 
+        // Устанавливаем таймаут перед любыми сетевыми операциями
+        beast::get_lowest_layer(stream).expires_after(timeout_);
+
         // Set SNI Hostname (для виртуального хостинга)
         if (!SSL_set_tlsext_host_name(stream.native_handle(), parsedUrl.host.c_str())) {
             beast::error_code errc{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
             throw beast::system_error{errc};
         }
 
-        // Подключаемся
+        // Подключаемся с таймаутом
         beast::get_lowest_layer(stream).connect(results);
 
-        // Устанавливаем таймаут
-        beast::get_lowest_layer(stream).expires_after(timeout_);
-
-        // SSL handshake
+        // SSL handshake с таймаутом
         stream.handshake(ssl::stream_base::client);
 
         // Формируем HTTP GET запрос

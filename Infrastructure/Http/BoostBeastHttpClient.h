@@ -58,7 +58,7 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
     static constexpr int HTTP_STATUS_OK = 200;
     static constexpr int HTTP_STATUS_MULTIPLE_CHOICES = 300;
     static constexpr int HTTP_STATUS_BAD_REQUEST = 400;
-    static constexpr int HTTP_REQUEST_TIMEOUT_SEC = 30;
+    static constexpr int HTTP_REQUEST_TIMEOUT_SEC = 10;
 
     /**
      * @brief Структура для хранения распарсенного URL
