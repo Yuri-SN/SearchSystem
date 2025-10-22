@@ -100,17 +100,29 @@ std::string HtmlParser::resolveUrl(const std::string& relativeUrl, const std::st
         return baseUrl;
     }
 
+    // Если начинается с //, это protocol-relative URL
+    if (relativeUrl.size() >= 2 && relativeUrl[0] == '/' && relativeUrl[1] == '/') {
+        // Извлекаем только схему из baseUrl
+        size_t schemeEnd = baseUrl.find("://");
+        if (schemeEnd != std::string::npos) {
+            return baseUrl.substr(0, schemeEnd + 1) + relativeUrl;
+        }
+        return "https:" + relativeUrl;
+    }
+
     // Если начинается с /, это путь от корня домена
     if (relativeUrl[0] == '/') {
         // Извлекаем схему и хост из baseUrl
         size_t schemeEnd = baseUrl.find("://");
         if (schemeEnd != std::string::npos) {
             size_t hostEnd = baseUrl.find('/', schemeEnd + 3);
+            std::string baseHost;
             if (hostEnd != std::string::npos) {
-                return baseUrl.substr(0, hostEnd) + relativeUrl;
+                baseHost = baseUrl.substr(0, hostEnd);
             } else {
-                return baseUrl + relativeUrl;
+                baseHost = baseUrl;
             }
+            return baseHost + relativeUrl;
         }
     }
 
