@@ -20,6 +20,14 @@ set(SOURCES
     DTO/CrawlResultDTO.h
     DTO/SearchRequestDTO.h
     DTO/SearchResponseDTO.h
+
+    Ports/IConfiguration.h
+    Ports/IDocumentRepository.h
+    Ports/IHtmlParser.h
+    Ports/IHttpClient.h
+    Ports/IHttpServer.h
+    Ports/ITextProcessor.h
+    Ports/IWordRepository.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
