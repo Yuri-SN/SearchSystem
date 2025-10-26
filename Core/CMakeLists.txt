@@ -16,6 +16,10 @@ set(SOURCES
     Domain/Model/Word.cpp
     Domain/Model/WordFrequency.h
     Domain/Model/WordFrequency.cpp
+
+    DTO/CrawlResultDTO.h
+    DTO/SearchRequestDTO.h
+    DTO/SearchResponseDTO.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
