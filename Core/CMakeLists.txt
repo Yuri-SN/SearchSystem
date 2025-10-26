@@ -28,6 +28,11 @@ set(SOURCES
     Ports/IHttpServer.h
     Ports/ITextProcessor.h
     Ports/IWordRepository.h
+
+    Domain/Service/IndexingService.h
+    Domain/Service/IndexingService.cpp
+    Domain/Service/RankingService.h
+    Domain/Service/RankingService.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
