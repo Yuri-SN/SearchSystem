@@ -5,10 +5,6 @@ project(SearchSystem LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(SearchSystem main.cpp)
-
 include(GNUInstallDirs)
-install(TARGETS SearchSystem
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+
+add_custom_target(CommonFiles SOURCES config.ini README.md)
