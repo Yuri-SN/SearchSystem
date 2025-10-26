@@ -33,6 +33,11 @@ set(SOURCES
     Domain/Service/IndexingService.cpp
     Domain/Service/RankingService.h
     Domain/Service/RankingService.cpp
+
+    Application/UseCases/IndexPageUseCase.h
+    Application/UseCases/IndexPageUseCase.cpp
+    Application/UseCases/SearchDocumentsUseCase.h
+    Application/UseCases/SearchDocumentsUseCase.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
