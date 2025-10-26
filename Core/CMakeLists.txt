@@ -7,6 +7,15 @@ set(SOURCES
     Domain/ValueObject/Url.cpp
     Domain/ValueObject/SearchQuery.h
     Domain/ValueObject/SearchQuery.cpp
+
+    Domain/Model/Document.h
+    Domain/Model/Document.cpp
+    Domain/Model/SearchResult.h
+    Domain/Model/SearchResult.cpp
+    Domain/Model/Word.h
+    Domain/Model/Word.cpp
+    Domain/Model/WordFrequency.h
+    Domain/Model/WordFrequency.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
