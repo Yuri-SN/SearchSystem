@@ -8,3 +8,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
 
 add_custom_target(CommonFiles SOURCES config.ini README.md)
+
+add_subdirectory(Core)
