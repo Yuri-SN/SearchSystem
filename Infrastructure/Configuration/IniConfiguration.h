@@ -6,7 +6,6 @@
 #include "../../Core/Ports/IConfiguration.h"
 
 namespace Infrastructure::Configuration {
-
 /**
  * @brief Реализация IConfiguration для чтения INI файлов
  *
@@ -79,5 +78,4 @@ class IniConfiguration : public Core::Ports::IConfiguration {
     // Хранилище: [section][key] = value
     std::map<std::string, std::map<std::string, std::string>> data_;
 };
-
 } // namespace Infrastructure::Configuration

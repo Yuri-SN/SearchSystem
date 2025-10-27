@@ -1,7 +1,6 @@
 #include "BoostLocaleTextProcessor.h"
 
 namespace Infrastructure::Text {
-
 BoostLocaleTextProcessor::BoostLocaleTextProcessor(const std::string& localeName) {
     // Генерируем локаль
     gen_.locale_cache_enabled(true);
@@ -60,5 +59,4 @@ std::string BoostLocaleTextProcessor::normalize(const std::string& text) {
 
     return result;
 }
-
 } // namespace Infrastructure::Text

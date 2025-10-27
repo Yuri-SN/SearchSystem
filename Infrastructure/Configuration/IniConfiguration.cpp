@@ -4,7 +4,6 @@
 #include <stdexcept>
 
 namespace Infrastructure::Configuration {
-
 IniConfiguration::IniConfiguration(const std::string& filePath) {
     load(filePath);
 }
@@ -66,7 +65,9 @@ std::string IniConfiguration::getValue(const std::string& section,
     return keyIt->second;
 }
 
-int IniConfiguration::getIntValue(const std::string& section, const std::string& key, int defaultValue) const {
+int IniConfiguration::getIntValue(const std::string& section,
+                                  const std::string& key,
+                                  int defaultValue) const {
     std::string value = getValue(section, key);
     if (value.empty()) {
         return defaultValue;
@@ -134,5 +135,4 @@ int IniConfiguration::getHttpServerPort() const {
 int IniConfiguration::getHttpServerMaxResults() const {
     return getIntValue("http_server", "max_results", DEFAULT_HTTP_SERVER_MAX_RESULTS);
 }
-
 } // namespace Infrastructure::Configuration

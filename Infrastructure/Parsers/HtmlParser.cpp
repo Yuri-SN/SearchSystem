@@ -1,11 +1,8 @@
 #include "HtmlParser.h"
 
 #include <gumbo.h>
-#include <algorithm>
-#include <cctype>
 
 namespace Infrastructure::Parsers {
-
 std::string HtmlParser::extractText(const std::string& html) {
     // Парсим HTML с помощью Gumbo
     GumboOutput* output = gumbo_parse(html.c_str());
@@ -41,7 +38,8 @@ void HtmlParser::extractTextFromNode(void* nodePtr, std::string& text) {
     }
 }
 
-std::vector<std::string> HtmlParser::extractLinks(const std::string& html, const std::string& baseUrl) {
+std::vector<std::string> HtmlParser::extractLinks(const std::string& html,
+                                                  const std::string& baseUrl) {
     // Парсим HTML с помощью Gumbo
     GumboOutput* output = gumbo_parse(html.c_str());
 
@@ -54,7 +52,9 @@ std::vector<std::string> HtmlParser::extractLinks(const std::string& html, const
     return links;
 }
 
-void HtmlParser::extractLinksFromNode(void* nodePtr, std::vector<std::string>& links, const std::string& baseUrl) {
+void HtmlParser::extractLinksFromNode(void* nodePtr,
+                                      std::vector<std::string>& links,
+                                      const std::string& baseUrl) {
     GumboNode* node = static_cast<GumboNode*>(nodePtr);
 
     if (node->type == GUMBO_NODE_ELEMENT) {
@@ -67,7 +67,8 @@ void HtmlParser::extractLinksFromNode(void* nodePtr, std::vector<std::string>& l
                 std::string url = href->value;
 
                 // Пропускаем якоря и javascript ссылки
-                if (url.empty() || url[0] == '#' || url.find("javascript:") == 0 || url.find("mailto:") == 0) {
+                if (url.empty() || url[0] == '#' || url.find("javascript:") == 0 ||
+                    url.find("mailto:") == 0) {
                     // Пропускаем
                 } else {
                     // Преобразуем относительный URL в абсолютный
@@ -134,5 +135,4 @@ std::string HtmlParser::resolveUrl(const std::string& relativeUrl, const std::st
 
     return baseUrl + "/" + relativeUrl;
 }
-
 } // namespace Infrastructure::Parsers

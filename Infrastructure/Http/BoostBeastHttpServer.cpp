@@ -15,8 +15,8 @@ namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
 namespace Infrastructure::Http {
-
-BoostBeastHttpServer::BoostBeastHttpServer(unsigned int threadCount) : threadCount_(threadCount), ioc_(nullptr) {}
+BoostBeastHttpServer::BoostBeastHttpServer(unsigned int threadCount)
+    : threadCount_(threadCount), ioc_(nullptr) {}
 
 BoostBeastHttpServer::~BoostBeastHttpServer() {
     stop();
@@ -97,18 +97,20 @@ void BoostBeastHttpServer::stop() {
 }
 
 void BoostBeastHttpServer::doAccept(const std::shared_ptr<tcp::acceptor>& acceptor) {
-    acceptor->async_accept(net::make_strand(*ioc_), [this, acceptor](beast::error_code errc, tcp::socket socket) {
-        if (!errc) {
-            // Обрабатываем соединение в отдельной задаче
-            net::post(socket.get_executor(),
-                      [this, sck = std::move(socket)]() mutable { handleSession(std::move(sck)); });
-        } else {
-            std::cerr << "Ошибка принятия соединения: " << errc.message() << "\n";
-        }
+    acceptor->async_accept(
+        net::make_strand(*ioc_), [this, acceptor](beast::error_code errc, tcp::socket socket) {
+            if (!errc) {
+                // Обрабатываем соединение в отдельной задаче
+                net::post(socket.get_executor(), [this, sck = std::move(socket)]() mutable {
+                    handleSession(std::move(sck));
+                });
+            } else {
+                std::cerr << "Ошибка принятия соединения: " << errc.message() << "\n";
+            }
 
-        // Принимаем следующее соединение
-        doAccept(acceptor);
-    });
+            // Принимаем следующее соединение
+            doAccept(acceptor);
+        });
 }
 
 void BoostBeastHttpServer::handleSession(tcp::socket socket) {
@@ -137,7 +139,8 @@ void BoostBeastHttpServer::handleSession(tcp::socket socket) {
     http::status responseStatus = http::status::ok;
 
     try {
-        httpResponse = handler_(std::string(req.method_string()), std::string(req.target()), req.body());
+        httpResponse =
+            handler_(std::string(req.method_string()), std::string(req.target()), req.body());
         responseStatus = static_cast<http::status>(httpResponse.statusCode);
     } catch (const std::exception& e) {
         httpResponse.body = R"({"error": "Internal server error"})";
@@ -172,5 +175,4 @@ void BoostBeastHttpServer::handleSession(tcp::socket socket) {
         socket.shutdown(tcp::socket::shutdown_send, errc);
     }
 }
-
 } // namespace Infrastructure::Http

@@ -3,8 +3,8 @@
 #include <stdexcept>
 
 namespace Infrastructure::Database {
-
-DatabaseConnection::DatabaseConnection(const std::string& connectionString) : connectionString_(connectionString) {
+DatabaseConnection::DatabaseConnection(const std::string& connectionString)
+    : connectionString_(connectionString) {
     try {
         connection_ = std::make_unique<pqxx::connection>(connectionString_);
     } catch (const std::exception& e) {
@@ -115,5 +115,4 @@ void DatabaseConnection::createIndexes(pqxx::work& txn) {
         ON word_frequencies(document_id)
     )");
 }
-
 } // namespace Infrastructure::Database

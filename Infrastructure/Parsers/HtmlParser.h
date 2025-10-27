@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace Infrastructure::Parsers {
-
 /**
  * @brief Реализация IHtmlParser с использованием gumbo-parser
  *
@@ -29,7 +28,8 @@ class HtmlParser : public Core::Ports::IHtmlParser {
      * @param baseUrl Базовый URL для разрешения относительных ссылок
      * @return Список найденных URL
      */
-    std::vector<std::string> extractLinks(const std::string& html, const std::string& baseUrl) override;
+    std::vector<std::string> extractLinks(const std::string& html,
+                                          const std::string& baseUrl) override;
 
   private:
     /**
@@ -40,7 +40,9 @@ class HtmlParser : public Core::Ports::IHtmlParser {
     /**
      * @brief Рекурсивно извлекает ссылки из узла Gumbo
      */
-    void extractLinksFromNode(void* node, std::vector<std::string>& links, const std::string& baseUrl);
+    void extractLinksFromNode(void* node,
+                              std::vector<std::string>& links,
+                              const std::string& baseUrl);
 
     /**
      * @brief Преобразует относительный URL в абсолютный
@@ -52,5 +54,4 @@ class HtmlParser : public Core::Ports::IHtmlParser {
      */
     bool isAbsoluteUrl(const std::string& url);
 };
-
 } // namespace Infrastructure::Parsers

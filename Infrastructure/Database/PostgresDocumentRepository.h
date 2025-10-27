@@ -6,7 +6,6 @@
 #include "DatabaseConnection.h"
 
 namespace Infrastructure::Database {
-
 /**
  * @brief PostgreSQL реализация репозитория документов
  *
@@ -38,7 +37,8 @@ class PostgresDocumentRepository : public Core::Ports::IDocumentRepository {
      * @param id ID документа
      * @return Документ, если найден
      */
-    std::optional<Core::Domain::Model::Document> findById(Core::Domain::Model::Document::IdType id) override;
+    std::optional<Core::Domain::Model::Document> findById(
+        Core::Domain::Model::Document::IdType id) override;
 
     /**
      * @brief Находит документ по URL
@@ -63,5 +63,4 @@ class PostgresDocumentRepository : public Core::Ports::IDocumentRepository {
   private:
     std::shared_ptr<DatabaseConnection> dbConnection_;
 };
-
 } // namespace Infrastructure::Database

@@ -6,7 +6,6 @@
 #include "DatabaseConnection.h"
 
 namespace Infrastructure::Database {
-
 /**
  * @brief PostgreSQL реализация репозитория слов и частотности
  *
@@ -68,7 +67,8 @@ class PostgresWordRepository : public Core::Ports::IWordRepository {
      * Релевантность рассчитывается как сумма частот всех найденных слов.
      * Результаты сортируются по релевантности (по убыванию).
      */
-    std::vector<Core::Domain::Model::SearchResult> search(const std::vector<std::string>& words) override;
+    std::vector<Core::Domain::Model::SearchResult> search(
+        const std::vector<std::string>& words) override;
 
   private:
     std::shared_ptr<DatabaseConnection> dbConnection_;
@@ -80,5 +80,4 @@ class PostgresWordRepository : public Core::Ports::IWordRepository {
      */
     Core::Domain::Model::Word::IdType getOrCreateWordId(const std::string& text);
 };
-
 } // namespace Infrastructure::Database

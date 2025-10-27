@@ -20,8 +20,6 @@ namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp;
 
 namespace Infrastructure::Http {
-
-
 BoostBeastHttpClient::BoostBeastHttpClient(std::chrono::seconds timeout) : timeout_(timeout) {}
 
 void BoostBeastHttpClient::setWorkerId(int workerId) {
@@ -48,7 +46,8 @@ bool BoostBeastHttpClient::isAccessible(const std::string& url) {
         }
 
         // Считаем URL доступным, если статус 2xx или 3xx
-        return response.statusCode >= HTTP_STATUS_OK && response.statusCode < HTTP_STATUS_BAD_REQUEST;
+        return response.statusCode >= HTTP_STATUS_OK &&
+               response.statusCode < HTTP_STATUS_BAD_REQUEST;
     } catch (const std::exception& e) {
         return false;
     }
@@ -74,8 +73,8 @@ BoostBeastHttpClient::ParsedUrl BoostBeastHttpClient::parseUrl(const std::string
     if (matches[3].matched) {
         result.port = matches[3].str();
     } else {
-        result.port =
-            (result.scheme == "https") ? std::to_string(DEFAULT_HTTPS_PORT) : std::to_string(DEFAULT_HTTP_PORT);
+        result.port = (result.scheme == "https") ? std::to_string(DEFAULT_HTTPS_PORT)
+                                                 : std::to_string(DEFAULT_HTTP_PORT);
     }
 
     // Путь (если не указан, используем "/")
@@ -85,7 +84,8 @@ BoostBeastHttpClient::ParsedUrl BoostBeastHttpClient::parseUrl(const std::string
     return result;
 }
 
-BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpGet(const ParsedUrl& parsedUrl) const {
+BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpGet(
+    const ParsedUrl& parsedUrl) const {
     try {
         // IO context для всех I/O операций
         net::io_context ioc;
@@ -130,12 +130,14 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpGet(const Pa
 
         return response;
     } catch (const std::exception& e) {
-        std::cerr << "HTTP ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what() << "\n";
+        std::cerr << "HTTP ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what()
+                  << "\n";
         return {"", 0, ""};
     }
 }
 
-BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const ParsedUrl& parsedUrl) const {
+BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(
+    const ParsedUrl& parsedUrl) const {
     try {
         // IO context для всех I/O операций
         net::io_context ioc;
@@ -153,8 +155,8 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const P
                 ctx.set_default_verify_paths();
             } catch (const std::exception& e2) {
                 std::cerr << getLogPrefix()
-                << "Предупреждение: не удалось загрузить SSL сертификаты. "
-                << "Скачайте cacert.pem с https://curl.se/docs/caextract.html\n";
+                          << "Предупреждение: не удалось загрузить SSL сертификаты. "
+                          << "Скачайте cacert.pem с https://curl.se/docs/caextract.html\n";
             }
         }
 
@@ -172,7 +174,8 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const P
 
         // Set SNI Hostname (для виртуального хостинга)
         if (!SSL_set_tlsext_host_name(stream.native_handle(), parsedUrl.host.c_str())) {
-            beast::error_code errc{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
+            beast::error_code errc{static_cast<int>(::ERR_get_error()),
+                                   net::error::get_ssl_category()};
             throw beast::system_error{errc};
         }
 
@@ -213,14 +216,19 @@ BoostBeastHttpClient::HttpResponse BoostBeastHttpClient::performHttpsGet(const P
 
         return response;
     } catch (const std::exception& e) {
-        std::cerr << "HTTPS ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what() << "\n";
+        std::cerr << "HTTPS ошибка для " << parsedUrl.host << parsedUrl.path << ": " << e.what()
+                  << "\n";
         return {"", 0, ""};
     }
 }
 
-std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::string& url, int redirectCount, std::vector<std::string> visitedUrls) {
+std::optional<std::string> BoostBeastHttpClient::handleRedirect(
+    const std::string& url,
+    int redirectCount,
+    std::vector<std::string> visitedUrls) {
     if (redirectCount >= MAX_REDIRECTS) {
-        std::cerr << getLogPrefix() << "Превышено максимальное количество редиректов для " << url << "\n";
+        std::cerr << getLogPrefix() << "Превышено максимальное количество редиректов для " << url
+                  << "\n";
         return std::nullopt;
     }
 
@@ -251,15 +259,18 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
         }
 
         // Проверяем статус ответа
-        if (response.statusCode >= HTTP_STATUS_OK && response.statusCode < HTTP_STATUS_MULTIPLE_CHOICES) {
+        if (response.statusCode >= HTTP_STATUS_OK &&
+            response.statusCode < HTTP_STATUS_MULTIPLE_CHOICES) {
             // Успешный ответ (2xx)
             return response.body;
         }
 
-        if (response.statusCode >= HTTP_STATUS_MULTIPLE_CHOICES && response.statusCode < HTTP_STATUS_BAD_REQUEST) {
+        if (response.statusCode >= HTTP_STATUS_MULTIPLE_CHOICES &&
+            response.statusCode < HTTP_STATUS_BAD_REQUEST) {
             // Редирект (3xx)
             if (response.locationHeader.empty()) {
-                std::cerr << getLogPrefix() << "Редирект обнаружен для " << url << ", но заголовок Location отсутствует\n";
+                std::cerr << getLogPrefix() << "Редирект обнаружен для " << url
+                          << ", но заголовок Location отсутствует\n";
                 return response.body;
             }
 
@@ -276,7 +287,9 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
             } else if (redirectUrl.substr(0, 4) != "http") {
                 // Относительный путь от текущего
                 const size_t lastSlash = parsedUrl.path.find_last_of('/');
-                const std::string basePath = (lastSlash != std::string::npos) ? parsedUrl.path.substr(0, lastSlash + 1) : "/";
+                const std::string basePath = (lastSlash != std::string::npos)
+                                                 ? parsedUrl.path.substr(0, lastSlash + 1)
+                                                 : "/";
                 redirectUrl = parsedUrl.scheme + "://" + parsedUrl.host + basePath + redirectUrl;
             }
 
@@ -287,7 +300,8 @@ std::optional<std::string> BoostBeastHttpClient::handleRedirect(const std::strin
         }
 
         // Ошибка клиента (4xx) или сервера (5xx)
-        std::cerr << getLogPrefix() << "HTTP ошибка " << response.statusCode << " для " << url << "\n";
+        std::cerr << getLogPrefix() << "HTTP ошибка " << response.statusCode << " для " << url
+                  << "\n";
         return std::nullopt;
 
     } catch (const std::exception& e) {
@@ -304,5 +318,4 @@ std::string BoostBeastHttpClient::getLogPrefix() const {
     oss << "[Поток " << workerId_ << "] ";
     return oss.str();
 }
-
-} // namespace Infrastructure::Http
+}  // namespace Infrastructure::Http

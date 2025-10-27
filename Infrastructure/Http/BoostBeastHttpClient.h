@@ -7,7 +7,6 @@
 #include "../../Core/Ports/IHttpClient.h"
 
 namespace Infrastructure::Http {
-
 /**
  * @brief Реализация HTTP-клиента на основе Boost.Beast
  *
@@ -20,7 +19,8 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      * @brief Конструктор с настройкой таймаута
      * @param timeout Таймаут для HTTP-запросов
      */
-    explicit BoostBeastHttpClient(std::chrono::seconds timeout = std::chrono::seconds(HTTP_REQUEST_TIMEOUT_SEC));
+    explicit BoostBeastHttpClient(
+        std::chrono::seconds timeout = std::chrono::seconds(HTTP_REQUEST_TIMEOUT_SEC));
 
     ~BoostBeastHttpClient() override = default;
 
@@ -85,7 +85,7 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      * @param url URL для парсинга
      * @return Структура с распарсенными компонентами
      */
-    static ParsedUrl parseUrl(const std::string& url) ;
+    static ParsedUrl parseUrl(const std::string& url);
 
     /**
      * @brief Выполняет HTTP GET-запрос (без SSL)
@@ -108,7 +108,9 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      * @param visitedUrls Список посещённых URL для детектирования циклов
      * @return Содержимое страницы после редиректа
      */
-    std::optional<std::string> handleRedirect(const std::string& location, int redirectCount, std::vector<std::string> visitedUrls = {});
+    std::optional<std::string> handleRedirect(const std::string& location,
+                                              int redirectCount,
+                                              std::vector<std::string> visitedUrls = {});
 
     /**
      * @brief Формирует префикс лог-сообщения с ID потока
@@ -116,5 +118,4 @@ class BoostBeastHttpClient : public Core::Ports::IHttpClient {
      */
     std::string getLogPrefix() const;
 };
-
 } // namespace Infrastructure::Http

@@ -4,7 +4,6 @@
 #include <stdexcept>
 
 namespace Infrastructure::Database {
-
 PostgresWordRepository::PostgresWordRepository(std::shared_ptr<DatabaseConnection> dbConnection)
     : dbConnection_(std::move(dbConnection)) {
     if (!dbConnection_) {
@@ -42,7 +41,8 @@ Core::Domain::Model::Word::IdType PostgresWordRepository::save(Core::Domain::Mod
     }
 }
 
-std::optional<Core::Domain::Model::Word> PostgresWordRepository::findByText(const std::string& text) {
+std::optional<Core::Domain::Model::Word> PostgresWordRepository::findByText(
+    const std::string& text) {
     if (!dbConnection_->isConnected()) {
         throw std::runtime_error("Нет соединения с базой данных");
     }
@@ -58,7 +58,8 @@ std::optional<Core::Domain::Model::Word> PostgresWordRepository::findByText(cons
         }
 
         const auto& row = result[0];
-        return Core::Domain::Model::Word(row[0].as<Core::Domain::Model::Word::IdType>(), row[1].as<std::string>());
+        return Core::Domain::Model::Word(row[0].as<Core::Domain::Model::Word::IdType>(),
+                                         row[1].as<std::string>());
     } catch (const std::exception& e) {
         throw std::runtime_error("Ошибка при поиске слова: " + std::string(e.what()));
     }
@@ -80,15 +81,17 @@ void PostgresWordRepository::saveFrequency(const Core::Domain::Model::WordFreque
             SET frequency = EXCLUDED.frequency
         )";
 
-        txn.exec(sql, pqxx::params(frequency.getDocumentId(), frequency.getWordId(), frequency.getFrequency()));
+        txn.exec(sql, pqxx::params(frequency.getDocumentId(), frequency.getWordId(),
+                                   frequency.getFrequency()));
         txn.commit();
     } catch (const std::exception& e) {
         throw std::runtime_error("Ошибка при сохранении частотности: " + std::string(e.what()));
     }
 }
 
-void PostgresWordRepository::saveWordFrequencies(Core::Domain::Model::Document::IdType documentId,
-                                                 const std::map<std::string, int>& wordFrequencies) {
+void PostgresWordRepository::saveWordFrequencies(
+    Core::Domain::Model::Document::IdType documentId,
+    const std::map<std::string, int>& wordFrequencies) {
     if (!dbConnection_->isConnected()) {
         throw std::runtime_error("Нет соединения с базой данных");
     }
@@ -160,7 +163,8 @@ void PostgresWordRepository::saveWordFrequencies(Core::Domain::Model::Document::
 
         txn.commit();
     } catch (const std::exception& e) {
-        throw std::runtime_error("Ошибка при сохранении частотностей слов: " + std::string(e.what()));
+        throw std::runtime_error("Ошибка при сохранении частотностей слов: " +
+                                 std::string(e.what()));
     }
 }
 
@@ -233,7 +237,8 @@ std::vector<Core::Domain::Model::SearchResult> PostgresWordRepository::search(
     }
 }
 
-Core::Domain::Model::Word::IdType PostgresWordRepository::getOrCreateWordId(const std::string& text) {
+Core::Domain::Model::Word::IdType PostgresWordRepository::getOrCreateWordId(
+    const std::string& text) {
     const std::string sql = R"(
         INSERT INTO words (text)
         VALUES ($1)
@@ -247,5 +252,4 @@ Core::Domain::Model::Word::IdType PostgresWordRepository::getOrCreateWordId(cons
 
     return result[0][0].as<Core::Domain::Model::Word::IdType>();
 }
-
 } // namespace Infrastructure::Database

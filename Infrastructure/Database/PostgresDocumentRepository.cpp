@@ -3,15 +3,16 @@
 #include <stdexcept>
 
 namespace Infrastructure::Database {
-
-PostgresDocumentRepository::PostgresDocumentRepository(std::shared_ptr<DatabaseConnection> dbConnection)
+PostgresDocumentRepository::PostgresDocumentRepository(
+    std::shared_ptr<DatabaseConnection> dbConnection)
     : dbConnection_(std::move(dbConnection)) {
     if (!dbConnection_) {
         throw std::invalid_argument("DatabaseConnection не может быть nullptr");
     }
 }
 
-Core::Domain::Model::Document::IdType PostgresDocumentRepository::save(Core::Domain::Model::Document& document) {
+Core::Domain::Model::Document::IdType PostgresDocumentRepository::save(
+    Core::Domain::Model::Document& document) {
     if (!dbConnection_->isConnected()) {
         throw std::runtime_error("Нет соединения с базой данных");
     }
@@ -33,7 +34,8 @@ Core::Domain::Model::Document::IdType PostgresDocumentRepository::save(Core::Dom
             txn.exec(updateSql, pqxx::params(document.getContent(), documentId));
         } else {
             // Документ не существует - вставляем новый
-            const std::string insertSql = "INSERT INTO documents (url, content) VALUES ($1, $2) RETURNING id";
+            const std::string insertSql =
+                "INSERT INTO documents (url, content) VALUES ($1, $2) RETURNING id";
             pqxx::result insertResult =
                 txn.exec(insertSql, pqxx::params(document.getUrl(), document.getContent()));
 
@@ -75,7 +77,8 @@ std::optional<Core::Domain::Model::Document> PostgresDocumentRepository::findByI
     }
 }
 
-std::optional<Core::Domain::Model::Document> PostgresDocumentRepository::findByUrl(const std::string& url) {
+std::optional<Core::Domain::Model::Document> PostgresDocumentRepository::findByUrl(
+    const std::string& url) {
     if (!dbConnection_->isConnected()) {
         throw std::runtime_error("Нет соединения с базой данных");
     }
@@ -111,7 +114,8 @@ bool PostgresDocumentRepository::existsByUrl(const std::string& url) {
 
         return result[0][0].as<bool>();
     } catch (const std::exception& e) {
-        throw std::runtime_error("Ошибка при проверке существования документа: " + std::string(e.what()));
+        throw std::runtime_error("Ошибка при проверке существования документа: " +
+                                 std::string(e.what()));
     }
 }
 
@@ -130,8 +134,8 @@ std::vector<Core::Domain::Model::Document> PostgresDocumentRepository::findAll()
         documents.reserve(result.size());
 
         for (const auto& row : result) {
-            documents.emplace_back(row[0].as<Core::Domain::Model::Document::IdType>(), row[1].as<std::string>(),
-                                   row[2].as<std::string>());
+            documents.emplace_back(row[0].as<Core::Domain::Model::Document::IdType>(),
+                                   row[1].as<std::string>(), row[2].as<std::string>());
         }
 
         return documents;
@@ -139,5 +143,4 @@ std::vector<Core::Domain::Model::Document> PostgresDocumentRepository::findAll()
         throw std::runtime_error("Ошибка при получении всех документов: " + std::string(e.what()));
     }
 }
-
 } // namespace Infrastructure::Database

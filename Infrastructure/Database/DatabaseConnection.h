@@ -5,7 +5,6 @@
 #include <string>
 
 namespace Infrastructure::Database {
-
 /**
  * @brief Утилитный класс для управления соединением с PostgreSQL
  *
@@ -79,5 +78,4 @@ class DatabaseConnection {
     std::unique_ptr<pqxx::connection> connection_;
     std::string connectionString_;
 };
-
 } // namespace Infrastructure::Database

@@ -9,7 +9,6 @@
 #include "../../Core/Ports/IHttpServer.h"
 
 namespace Infrastructure::Http {
-
 /**
  * @brief Асинхронный HTTP-сервер на основе Boost.Beast и Boost.Asio
  *
@@ -64,5 +63,4 @@ class BoostBeastHttpServer : public Core::Ports::IHttpServer {
      */
     void handleSession(boost::asio::ip::tcp::socket socket);
 };
-
 } // namespace Infrastructure::Http

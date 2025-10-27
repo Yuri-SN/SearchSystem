@@ -6,7 +6,6 @@
 #include "../../Core/Ports/ITextProcessor.h"
 
 namespace Infrastructure::Text {
-
 /**
  * @brief Реализация ITextProcessor с использованием Boost.Locale
  *
@@ -42,5 +41,4 @@ class BoostLocaleTextProcessor : public Core::Ports::ITextProcessor {
     boost::locale::generator gen_;  // Генератор локалей
     std::locale locale_;            // Текущая локаль
 };
-
 } // namespace Infrastructure::Text
