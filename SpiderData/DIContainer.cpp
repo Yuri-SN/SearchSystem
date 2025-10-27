@@ -12,45 +12,32 @@
 
 namespace SpiderData {
 DIContainer::DIContainer(const std::string& configPath) {
-    // Загружаем конфигурацию
     configuration_ = std::make_shared<Infrastructure::Configuration::IniConfiguration>(configPath);
 
-    // Инициализируем все зависимости
     initialize();
 }
 
 void DIContainer::initialize() {
-    // 1. Создаём Infrastructure компоненты
-
-    // HTTP клиент для скачивания страниц
     httpClient_ = std::make_shared<Infrastructure::Http::BoostBeastHttpClient>();
 
-    // HTML парсер
     htmlParser_ = std::make_shared<Infrastructure::Parsers::HtmlParser>();
 
-    // Текстовый процессор (используем русскую локаль)
     textProcessor_ =
         std::make_shared<Infrastructure::Text::BoostLocaleTextProcessor>("ru_RU.UTF-8");
 
-    // 2. Создаём подключение к базе данных
     const std::string connectionString = createDatabaseConnectionString();
     auto dbConnection =
         std::make_shared<Infrastructure::Database::DatabaseConnection>(connectionString);
 
-    // Создаём схему БД, если её нет
     dbConnection->createSchema();
 
-    // Сохраняем указатель на соединение
     databaseConnection_ = dbConnection;
 
-    // 3. Создаём репозитории
     documentRepository_ =
         std::make_shared<Infrastructure::Database::PostgresDocumentRepository>(dbConnection);
     wordRepository_ =
         std::make_shared<Infrastructure::Database::PostgresWordRepository>(dbConnection);
 
-    // 4. Создаём Use Case для индексации
-    // IndexPageUseCase создаёт IndexingService внутри себя
     indexPageUseCase_ = std::make_shared<Core::Application::UseCases::IndexPageUseCase>(
         documentRepository_, wordRepository_, htmlParser_, textProcessor_);
 }

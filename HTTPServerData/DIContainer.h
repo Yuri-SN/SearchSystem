@@ -3,20 +3,18 @@
 #include <memory>
 #include <string>
 
-#include "../Core/Application/UseCases/IndexPageUseCase.h"
+#include "../Core/Application/UseCases/SearchDocumentsUseCase.h"
 #include "../Core/Ports/IConfiguration.h"
-#include "../Core/Ports/IDocumentRepository.h"
-#include "../Core/Ports/IHtmlParser.h"
-#include "../Core/Ports/IHttpClient.h"
+#include "../Core/Ports/IHttpServer.h"
 #include "../Core/Ports/ITextProcessor.h"
 #include "../Core/Ports/IWordRepository.h"
 
-namespace SpiderData {
+namespace HTTPServerData {
 /**
- * @brief Контейнер зависимостей для приложения Spider
+ * @brief Контейнер зависимостей для приложения HTTPServer
  *
  * Composition Root - место, где создаются и связываются все зависимости.
- * Реализует паттерн Dependency Injection для приложения-краулера.
+ * Реализует паттерн Dependency Injection для поискового HTTP-сервера.
  */
 class DIContainer {
   public:
@@ -35,19 +33,17 @@ class DIContainer {
     DIContainer& operator=(DIContainer&&) = delete;
 
     /**
-     * @brief Получить Use Case для индексации страниц (singleton)
-     * @return Shared pointer на IndexPageUseCase
+     * @brief Получить Use Case для поиска документов
+     * @return Shared pointer на SearchDocumentsUseCase
      */
-    std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> getIndexPageUseCase();
+    std::shared_ptr<Core::Application::UseCases::SearchDocumentsUseCase>
+    getSearchDocumentsUseCase();
 
     /**
-     * @brief Создать новый Use Case для индексации страниц
-     * Создаёт новый экземпляр с собственным подключением к БД.
-     * Используется для многопоточной работы, где каждый поток должен иметь
-     * своё собственное подключение к БД.
-     * @return Shared pointer на новый IndexPageUseCase
+     * @brief Получить HTTP-сервер
+     * @return Shared pointer на IHttpServer
      */
-    std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> createIndexPageUseCase();
+    std::shared_ptr<Core::Ports::IHttpServer> getHttpServer();
 
     /**
      * @brief Получить конфигурацию
@@ -60,17 +56,16 @@ class DIContainer {
     std::shared_ptr<Core::Ports::IConfiguration> configuration_;
 
     // Infrastructure components
-    std::shared_ptr<Core::Ports::IHttpClient> httpClient_;
-    std::shared_ptr<Core::Ports::IHtmlParser> htmlParser_;
     std::shared_ptr<Core::Ports::ITextProcessor> textProcessor_;
+    std::shared_ptr<Core::Ports::IHttpServer> httpServer_;
 
     // Database
-    std::shared_ptr<void> databaseConnection_;
-    std::shared_ptr<Core::Ports::IDocumentRepository> documentRepository_;
+    std::shared_ptr<void> databaseConnection_;  // DatabaseConnection (void* чтобы
+                                                // не включать заголовок)
     std::shared_ptr<Core::Ports::IWordRepository> wordRepository_;
 
     // Use Cases
-    std::shared_ptr<Core::Application::UseCases::IndexPageUseCase> indexPageUseCase_;
+    std::shared_ptr<Core::Application::UseCases::SearchDocumentsUseCase> searchDocumentsUseCase_;
 
     /**
      * @brief Инициализирует все зависимости
@@ -83,4 +78,4 @@ class DIContainer {
      */
     std::string createDatabaseConnectionString() const;
 };
-} // namespace SpiderData
+} // namespace HTTPServerData
