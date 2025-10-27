@@ -57,7 +57,7 @@
 
 **Layer 5: Domain Layer (Бизнес-логика)**
 
-*Entities (сущности):*
+*Models (модели):*
 - `Document` - веб-страница
 - `Word` - уникальное слово
 - `WordFrequency` - связь документ-слово с частотой
@@ -70,3 +70,127 @@
 *Domain Services (доменные сервисы):*
 - `IndexingService` - анализ частотности слов
 - `RankingService` - ранжирование результатов
+
+## Граф зависимостей
+
+```bash
+Spider (executable)
+  └─> libSpiderData.a
+       ├─> libCore.a
+       └─> libInfrastructure.a
+            ├─> libCore.a
+            ├─> Boost (locale, system, thread)
+            ├─> OpenSSL (ssl, crypto) - для HTTPS
+            ├─> libpqxx (PostgreSQL)
+            └─> gumbo-parser (HTML парсинг)
+
+HTTPServer (executable)
+  └─> libHTTPServerData.a
+       ├─> libCore.a
+       └─> libInfrastructure.a
+            ├─> libCore.a
+            ├─> Boost (locale, system, thread)
+            ├─> OpenSSL (ssl, crypto) - для HTTPS
+            ├─> libpqxx (PostgreSQL)
+            └─> gumbo-parser (HTML парсинг)
+```
+
+## Технологии
+
+- **Язык:** C++17
+- **Сборка:** CMake 3.16+
+- **База данных:** PostgreSQL (libpqxx 7.10+)
+- **HTTP:** Boost Beast (Boost 1.88+)
+- **SSL/TLS:** OpenSSL 3.5+ (для HTTPS)
+- **Локализация:** Boost Locale
+- **HTML парсинг:** gumbo-parser 0.13+
+- **Конфигурация:** INI-файлы
+
+## Установка зависимостей
+
+### Windows
+
+**Используя vcpkg:**
+
+```powershell
+# Установка vcpkg (если ещё не установлен)
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+
+# Установка зависимостей
+.\vcpkg install boost-locale boost-system boost-thread boost-asio boost-beast openssl libpqxx gumbo
+
+# Интеграция с Visual Studio
+.\vcpkg integrate install
+```
+
+**Используя CMake с vcpkg:**
+
+```bash
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[путь к vcpkg]/scripts/buildsystems/vcpkg.cmake
+cmake --build build
+```
+
+## Сборка проекта
+
+### Windows
+
+```powershell
+# Создание директории для сборки
+mkdir build
+cd build
+
+# Конфигурация CMake (с vcpkg)
+cmake .. -DCMAKE_TOOLCHAIN_FILE=[путь к vcpkg]/scripts/buildsystems/vcpkg.cmake
+
+# Сборка
+cmake --build . --config Release
+```
+
+## Запуск
+
+### 1. Настройка базы данных
+
+```bash
+# Создание базы данных
+createdb search_system
+
+# Таблицы создадутся автоматически при первом запуске Spider
+```
+
+### 2. Настройка конфигурации
+
+Отредактируйте `config.ini` в корне проекта:
+
+```ini
+[database]
+host=localhost
+port=5432
+dbname=search_system
+user=postgres
+password=secret
+
+[spider]
+start_url=https://example.com
+crawl_depth=3
+thread_pool_size=10
+
+[http_server]
+port=8080
+max_results=10
+```
+
+### 3. Запуск Spider (краулера)
+
+```bash
+./build/Spider/Spider
+```
+
+### 4. Запуск HTTPServer (поисковика)
+
+```bash
+./build/HTTPServer/HTTPServer
+```
+
+Поисковик будет доступен по адресу `http://localhost:8080`
