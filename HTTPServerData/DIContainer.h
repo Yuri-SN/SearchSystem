@@ -5,6 +5,7 @@
 
 #include "../Core/Application/UseCases/SearchDocumentsUseCase.h"
 #include "../Core/Ports/IConfiguration.h"
+#include "../Core/Ports/IDatabaseConnection.h"
 #include "../Core/Ports/IHttpServer.h"
 #include "../Core/Ports/ITextProcessor.h"
 #include "../Core/Ports/IWordRepository.h"
@@ -60,8 +61,7 @@ class DIContainer {
     std::shared_ptr<Core::Ports::IHttpServer> httpServer_;
 
     // Database
-    std::shared_ptr<void> databaseConnection_;  // DatabaseConnection (void* чтобы
-                                                // не включать заголовок)
+    std::shared_ptr<Core::Ports::IDatabaseConnection> databaseConnection_;
     std::shared_ptr<Core::Ports::IWordRepository> wordRepository_;
 
     // Use Cases

@@ -6,6 +6,7 @@
 #include "../Core/Application/UseCases/IndexPageUseCase.h"
 #include "../Core/Ports/IConfiguration.h"
 #include "../Core/Ports/IDocumentRepository.h"
+#include "../Core/Ports/IDatabaseConnection.h"
 #include "../Core/Ports/IHtmlParser.h"
 #include "../Core/Ports/IHttpClient.h"
 #include "../Core/Ports/ITextProcessor.h"
@@ -65,7 +66,7 @@ class DIContainer {
     std::shared_ptr<Core::Ports::ITextProcessor> textProcessor_;
 
     // Database
-    std::shared_ptr<void> databaseConnection_;
+    std::shared_ptr<Core::Ports::IDatabaseConnection> databaseConnection_;
     std::shared_ptr<Core::Ports::IDocumentRepository> documentRepository_;
     std::shared_ptr<Core::Ports::IWordRepository> wordRepository_;
 

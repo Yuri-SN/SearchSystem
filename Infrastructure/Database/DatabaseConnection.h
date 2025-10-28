@@ -4,6 +4,8 @@
 #include <pqxx/pqxx>
 #include <string>
 
+#include "../../Core/Ports/IDatabaseConnection.h"
+
 namespace Infrastructure::Database {
 /**
  * @brief Утилитный класс для управления соединением с PostgreSQL
@@ -11,7 +13,7 @@ namespace Infrastructure::Database {
  * Управляет подключением к базе данных, создаёт схему таблиц,
  * предоставляет доступ к connection для выполнения запросов.
  */
-class DatabaseConnection {
+class DatabaseConnection : public Core::Ports::IDatabaseConnection {
   public:
     /**
      * @brief Конструктор
@@ -38,7 +40,7 @@ class DatabaseConnection {
      * @brief Получить соединение с БД
      * @return Ссылка на объект соединения
      */
-    pqxx::connection& getConnection();
+    pqxx::connection& getConnection() override;
 
     /**
      * @brief Создаёт схему базы данных (таблицы и индексы)
@@ -46,13 +48,13 @@ class DatabaseConnection {
      * Создаёт таблицы documents, words, word_frequencies если их нет.
      * Идемпотентная операция - можно вызывать многократно.
      */
-    void createSchema();
+    void createSchema() override;
 
     /**
      * @brief Проверяет, установлено ли соединение с БД
      * @return true если соединение активно
      */
-    bool isConnected() const;
+    bool isConnected() const override;
 
   private:
     /**
