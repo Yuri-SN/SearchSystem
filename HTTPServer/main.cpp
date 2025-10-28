@@ -2,6 +2,8 @@
 #include <sstream>
 #include <string>
 
+#include <windows.h>
+
 #include "../HTTPServerData/DIContainer.h"
 #include "../Core/Ports/IHttpServer.h"
 
@@ -343,6 +345,10 @@ std::string parseQueryFromBody(const std::string& body) {
 }
 
 int main(int argc, char* argv[]) {
+    // Устанавливаем UTF-8 для консоли
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
     try {
         std::cout << "=== Поисковая система - HTTP Сервер ===" << std::endl;
         std::cout << std::endl;

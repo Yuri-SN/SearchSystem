@@ -179,8 +179,6 @@ int main(int argc, char* argv[]) {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
-    setvbuf(stdout, nullptr, _IOFBF, 1000);
-
     try {
         std::cout << "=== Поисковая система - Программа Паук ===" << "\n\n";
 
